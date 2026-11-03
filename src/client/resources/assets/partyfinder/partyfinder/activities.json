@@ -1,0 +1,26 @@
+{
+  "activities": [
+    { "id": "mineshaft", "category": "mining", "icon": "minecraft:packed_ice", "color": "#55FFFF", "max_size": 4 },
+    { "id": "crystal_hollows", "category": "mining", "icon": "minecraft:amethyst_shard", "color": "#FF55FF", "max_size": 5 },
+    { "id": "mining_event", "category": "mining", "icon": "minecraft:iron_pickaxe", "color": "#AAAAAA", "max_size": 5 },
+
+    { "id": "sea_creatures", "category": "fishing", "icon": "minecraft:fishing_rod", "color": "#5555FF", "max_size": 5 },
+    { "id": "lava_fishing", "category": "fishing", "icon": "minecraft:magma_cream", "color": "#FFAA00", "max_size": 5 },
+    { "id": "trophy_fishing", "category": "fishing", "icon": "minecraft:tropical_fish", "color": "#FFFF55", "max_size": 5 },
+    { "id": "jerry_workshop", "category": "fishing", "icon": "minecraft:snowball", "color": "#FFFFFF", "max_size": 5 },
+
+    { "id": "revenant", "category": "slayer", "icon": "minecraft:rotten_flesh", "color": "#00AA00", "max_size": 5 },
+    { "id": "tarantula", "category": "slayer", "icon": "minecraft:spider_eye", "color": "#AA0000", "max_size": 5 },
+    { "id": "sven", "category": "slayer", "icon": "minecraft:bone", "color": "#FFFFFF", "max_size": 5 },
+    { "id": "voidgloom", "category": "slayer", "icon": "minecraft:ender_pearl", "color": "#AA00AA", "max_size": 5 },
+    { "id": "inferno", "category": "slayer", "icon": "minecraft:blaze_powder", "color": "#FF5555", "max_size": 5 },
+    { "id": "riftstalker", "category": "slayer", "icon": "minecraft:red_dye", "color": "#FF55FF", "max_size": 5 },
+
+    { "id": "dungeons_floor", "category": "dungeons", "icon": "minecraft:skeleton_skull", "color": "#FF5555", "max_size": 5 },
+    { "id": "dungeons_master", "category": "dungeons", "icon": "minecraft:wither_skeleton_skull", "color": "#AA0000", "max_size": 5 },
+    { "id": "kuudra", "category": "kuudra", "icon": "minecraft:magma_block", "color": "#FFAA00", "max_size": 4 },
+
+    { "id": "diana", "category": "misc", "icon": "minecraft:golden_shovel", "color": "#FFAA00", "max_size": 5 },
+    { "id": "other", "category": "misc", "icon": "minecraft:name_tag", "color": "#FFFFFF", "max_size": 10 }
+  ]
+}

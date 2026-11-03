@@ -1,0 +1,73 @@
+{
+  "texture": "minecraft:textures/gui/container/generic_54.png",
+  "rows": 4,
+  "filler": "minecraft:black_stained_glass_pane",
+  "slots": [
+    {
+      "slot": 10,
+      "action": "category",
+      "category": "mining",
+      "icon": "minecraft:diamond_pickaxe"
+    },
+    {
+      "slot": 11,
+      "action": "category",
+      "category": "fishing",
+      "icon": "minecraft:fishing_rod"
+    },
+    {
+      "slot": 12,
+      "action": "category",
+      "category": "slayer",
+      "icon": "minecraft:golden_sword"
+    },
+    {
+      "slot": 13,
+      "action": "all",
+      "icon": "minecraft:compass"
+    },
+    {
+      "slot": 14,
+      "action": "category",
+      "category": "dungeons",
+      "icon": "minecraft:wither_skeleton_skull"
+    },
+    {
+      "slot": 15,
+      "action": "category",
+      "category": "kuudra",
+      "icon": "minecraft:magma_block"
+    },
+    {
+      "slot": 16,
+      "action": "category",
+      "category": "misc",
+      "icon": "minecraft:golden_shovel"
+    },
+    {
+      "slot": 30,
+      "action": "create",
+      "icon": "minecraft:writable_book"
+    },
+    {
+      "slot": 31,
+      "action": "close",
+      "icon": "minecraft:barrier"
+    },
+    {
+      "slot": 32,
+      "action": "requests",
+      "icon": "minecraft:bell"
+    },
+    {
+      "slot": 27,
+      "action": "moderation",
+      "icon": "minecraft:anvil"
+    },
+    {
+      "slot": 35,
+      "action": "reconnect",
+      "icon": "minecraft:comparator"
+    }
+  ]
+}

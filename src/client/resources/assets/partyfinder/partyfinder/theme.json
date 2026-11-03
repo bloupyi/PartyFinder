@@ -1,0 +1,24 @@
+{
+  "colors": {
+    "title": "#FFFFFF",
+    "label": "#A0A0A0",
+    "empty": "#A0A0A0",
+    "owner": "#AAAAAA",
+    "note": "#E0E0E0",
+    "requirements": "#FFAA00",
+    "age": "#808080",
+    "slots_open": "#55FF55",
+    "slots_full": "#FF5555",
+    "status_online": "#55FF55",
+    "status_connecting": "#FFFF55",
+    "status_offline": "#FF5555",
+    "menu_title": "#404040",
+    "menu_status_online": "#00AA00",
+    "menu_status_connecting": "#AA8800",
+    "menu_status_offline": "#AA0000",
+    "reports_some": "#FF5555",
+    "reports_none": "#55FF55",
+    "report_limit": "#AAAAAA",
+    "banned": "#AA0000"
+  }
+}

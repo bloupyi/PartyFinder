@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "partyfinder",
+  "version": "${version}",
+  "name": "PartyFinder",
+  "description": "Party finder for Hypixel SkyBlock activities: mining, fishing, slayers, dungeons and more.",
+  "authors": [
+    "bloup"
+  ],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/partyfinder/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "fr.bloup.partyfinder.Partyfinder"
+    ],
+    "client": [
+      "fr.bloup.partyfinder.client.PartyfinderClient"
+    ],
+    "fabric-datagen": [
+      "fr.bloup.partyfinder.client.PartyfinderDataGenerator"
+    ]
+  },
+  "mixins": [
+    "partyfinder.mixins.json",
+    {
+      "config": "partyfinder.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
