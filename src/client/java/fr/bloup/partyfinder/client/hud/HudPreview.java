@@ -26,12 +26,12 @@ final class HudPreview {
         var player = Minecraft.getInstance().player;
         if (members.isEmpty() && player != null && cfg.showSelf) {
             members.add(new PartyHud.Member(player.getUUID(), player.getGameProfile().name(), true, true, PartyStatus.self(),
-                    player, -1, List.of(Component.literal("Tank 31"), Component.literal("Cata 40"))));
+                    player, -1, List.of(Component.literal("Tank 31"), Component.literal("Cata 40")), true));
         }
         members.add(new PartyHud.Member(SAMPLE_A, "Notch", false, false,
-                new MemberStatus("Notch", 0.42f, 1260, 3000, 180, 600, 820, "mining_3", "Dwarven Mines", List.of()),
-                null, 18, List.of(Component.literal("Mage 38"), Component.literal("Cata 42"))));
-        members.add(new PartyHud.Member(SAMPLE_B, "jeb_", false, false, null, null, -1, List.of()));
+                new MemberStatus("Notch", 0.42f, 1260, 3000, 180, 600, 820, "mining_3", "Dwarven Mines", List.of(), false),
+                null, 18, List.of(Component.literal("Mage 38"), Component.literal("Cata 42")), true));
+        members.add(new PartyHud.Member(SAMPLE_B, "jeb_", false, false, null, null, -1, List.of(), false));
         return members.subList(0, Math.min(members.size(), cfg.maxMembers));
     }
 

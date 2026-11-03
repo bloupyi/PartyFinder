@@ -19,6 +19,8 @@ public record Listing(
         int size,
         int maxSize,
         int maxReports,
+        Map<String, Integer> minStats,
+        List<String> roles,
         ReportSummary ownerReports,
         List<Member> members,
         long createdAt,
@@ -75,6 +77,23 @@ public record Listing(
         return Map.copyOf(options);
     }
 
+    public static final List<String> CLASSES = List.of("healer", "mage", "berserk", "archer", "tank");
+    private static final Pattern STAT_ID = Pattern.compile("sb|cata|class|hotm|skill_[a-z]{1,16}|slayer_[a-z]{1,16}");
+
+    private static Map<String, Integer> cleanMinStats(Map<String, Integer> raw) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        if (raw == null) return Map.of();
+        raw.forEach((id, min) -> {
+            if (result.size() < 4 && id != null && min != null && STAT_ID.matcher(id).matches() && min > 0) result.put(id, Math.min(min, 1000));
+        });
+        return Map.copyOf(result);
+    }
+
+    private static List<String> cleanRoles(List<String> raw) {
+        if (raw == null) return List.of();
+        return raw.stream().filter(CLASSES::contains).limit(39).toList();
+    }
+
     private static List<Member> cleanMembers(List<Member> raw, Player owner) {
         List<Member> members = new ArrayList<>();
         if (raw != null) {
@@ -103,6 +122,8 @@ public record Listing(
                 Math.clamp(raw.size(), 1, maxSize),
                 maxSize,
                 Math.clamp(raw.maxReports(), NO_REPORT_LIMIT, 50),
+                cleanMinStats(raw.minStats()),
+                cleanRoles(raw.roles()),
                 ReportSummary.sanitize(raw.ownerReports()),
                 cleanMembers(raw.members(), raw.owner()),
                 raw.createdAt(),

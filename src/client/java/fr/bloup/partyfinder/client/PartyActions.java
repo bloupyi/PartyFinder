@@ -83,6 +83,17 @@ public final class PartyActions {
         }).orElse(false);
     }
 
+    /** Quick answer (keybind) to the most recent join request, while it is still pending. */
+    public static void respondToLatest(boolean accept) {
+        List<PartyFinderState.JoinRequest> requests = PartyFinderState.joinRequests();
+        if (requests.isEmpty()) return;
+        String name = requests.getLast().player().name();
+        if (accept) accept(name);
+        else deny(name);
+        chat(Component.translatable(accept ? "partyfinder.chat.request_accepted" : "partyfinder.chat.request_denied", name)
+                .withStyle(accept ? ChatFormatting.GREEN : ChatFormatting.RED));
+    }
+
     public static boolean deny(String name) {
         return PartyFinderState.takeJoinRequest(name).map(player -> {
             BackendConnection.respond(player, false);

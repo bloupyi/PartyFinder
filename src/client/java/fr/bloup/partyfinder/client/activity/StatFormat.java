@@ -66,6 +66,36 @@ public final class StatFormat {
         return null;
     }
 
+    /** Stats an activity can require, in the order shown in the listing form ("kuudra" is a run count, not a level). */
+    public static List<String> requirementIds(List<String> statIds) {
+        return statIds.stream().filter(id -> !id.equals("kuudra")).toList();
+    }
+
+    public static int maxFor(String id) {
+        if (id.equals("sb")) return 500;
+        if (id.equals("hotm")) return 10;
+        if (id.startsWith("slayer_")) return 9;
+        if (id.startsWith("skill_")) return 60;
+        return 50;
+    }
+
+    /** Label of a requirement id without value, e.g. "Cata", "Mining", "Revenant". */
+    public static Component label(String id) {
+        if (id.equals("class")) return Component.translatable("partyfinder.stat.class_level");
+        if (id.startsWith("skill_")) return Component.translatable("partyfinder.stat.skill." + id.substring(6), "").copy();
+        if (id.startsWith("slayer_")) return Component.translatable("partyfinder.stat.slayer." + id.substring(7), "").copy();
+        return Component.translatable("partyfinder.stat." + id, "");
+    }
+
+    /** "Cata 30+" */
+    public static Component requirement(String id, int min) {
+        return Component.literal(label(id).getString().strip() + " " + min + "+");
+    }
+
+    public static Component className(String cls) {
+        return Component.translatable("partyfinder.class." + cls);
+    }
+
     private static Component stat(String key, int value) {
         return Component.translatable("partyfinder.stat." + key, value);
     }

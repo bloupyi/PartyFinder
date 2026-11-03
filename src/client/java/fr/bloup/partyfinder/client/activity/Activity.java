@@ -17,7 +17,8 @@ public record Activity(
         int maxSize,
         List<Option> options,
         Launch launch,
-        List<String> stats
+        List<String> stats,
+        List<String> events
 ) {
     public enum Launch { NONE, HOST, ALL }
 

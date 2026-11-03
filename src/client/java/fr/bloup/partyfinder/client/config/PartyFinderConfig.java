@@ -10,6 +10,8 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class PartyFinderConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -21,11 +23,15 @@ public class PartyFinderConfig {
     public boolean autoAcceptInvites = true;
     public boolean notifyJoinRequests = true;
     public boolean notifyPartyFull = true;
+    public Map<String, Boolean> eventAlerts = new LinkedHashMap<>();
+    public int eventLeadMinutes = 5;
     public Hud hud = new Hud();
 
     public enum Anchor { TOP_LEFT, TOP_RIGHT, CENTER_LEFT, CENTER_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
 
     public enum Layout { VERTICAL, HORIZONTAL }
+
+    public enum Side { LEFT, RIGHT }
 
     public enum Portrait { HEAD, MODEL, NONE }
 
@@ -40,6 +46,7 @@ public class PartyFinderConfig {
         public int offsetX = 4;
         public int offsetY = 4;
         public Layout layout = Layout.VERTICAL;
+        public Side side = Side.LEFT;
         public int spacing = 2;
         public int scale = 100;
         public int maxMembers = 8;
@@ -56,6 +63,7 @@ public class PartyFinderConfig {
         public boolean showDistance = true;
         public boolean showStats = true;
         public boolean showHeldItem = false;
+        public boolean showDungeonClass = true;
         public boolean showArmor = false;
         public boolean shareStatus = true;
         public int backgroundOpacity = 70;
@@ -66,6 +74,7 @@ public class PartyFinderConfig {
             Hud defaults = new Hud();
             if (anchor == null) anchor = defaults.anchor;
             if (layout == null) layout = defaults.layout;
+            if (side == null) side = defaults.side;
             if (portrait == null) portrait = defaults.portrait;
             if (healthText == null) healthText = defaults.healthText;
             scale = Math.clamp(scale, 50, 200);
@@ -87,6 +96,8 @@ public class PartyFinderConfig {
                 PartyFinderConfig loaded = GSON.fromJson(reader, PartyFinderConfig.class);
                 if (loaded != null) instance = loaded;
                 if (instance.hud == null) instance.hud = new Hud();
+                if (instance.eventAlerts == null) instance.eventAlerts = new LinkedHashMap<>();
+                instance.eventLeadMinutes = Math.clamp(instance.eventLeadMinutes, 0, 30);
                 instance.hud.sanitize();
             } catch (Exception e) {
                 Partyfinder.LOGGER.error("Failed to read {}", PATH, e);

@@ -17,9 +17,18 @@ Party data comes from Hypixel's Mod API protocol, built in (the official Hypixel
 
 Settings: `/pf config` (or `config/partyfinder.json`: `showMenuButton`, `autoAcceptInvites`, `notifyJoinRequests`, `notifyPartyFull`, `hud`). The mod only talks to its server while connected to Hypixel, and the server address is fixed.
 
+## Listings
+
+- **Verified requirements**: minimum Cata, class, HOTM, skills or slayer levels, checked by the server against the requester's real profile.
+- **Dungeon roles**: the leader picks the wanted classes; members' selected classes fill them and the listing shows the open ones.
+- **Reputation**: +1 recommendations (only for players you played with in the last 24 h) next to reports.
+- **History**: past finder parties are kept locally to invite the same players again, republish the same listing, +1 or report.
+- **Event alerts**: toast and chat when the Fishing Festival, Spooky Festival, Mining Fiesta or Diana starts (optionally a few minutes before), with the number of open parties and a View button (`/pf event <id>`).
+- **Presets**: the last listing is remembered (per activity too) and named presets can be saved; the menu offers a one-click Republish.
+
 ## Party HUD
 
-Frames for every member of your Hypixel party: head or live 3D player model with equipment, health/mana bars, health text, defense, island or distance, finder stats, armor and held item. Position, anchor, layout, scale, spacing, opacity and every element are configurable (`/pf hud`). Members close to you are read from the world; members further away are shown from the status their own client shares through the server (only between players who are in each other's party).
+Frames for every member of your Hypixel party: head or live 3D player model with equipment, health/mana bars, health text, defense, island or distance, finder stats, armor and held item. In dungeons it also shows each member's class and who is dead. Position, side, layout, scale, spacing, opacity and every element are configurable (`/pf hud`). Members close to you are read from the world; members further away are shown from the status their own client shares through the server (only between players who are in each other's party).
 
 ## Backend
 

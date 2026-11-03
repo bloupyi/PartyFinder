@@ -31,6 +31,12 @@
     "hud_health_mid": "#FFFF55",
     "hud_health_low": "#FF5555",
     "hud_mana": "#5555FF",
-    "hud_bar_background": "#000000"
+    "hud_bar_background": "#000000",
+    "hud_dead": "#777777",
+    "class_healer": "#FF55FF",
+    "class_mage": "#55FFFF",
+    "class_berserk": "#FF5555",
+    "class_archer": "#55FF55",
+    "class_tank": "#AAAAAA"
   }
 }

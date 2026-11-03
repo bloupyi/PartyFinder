@@ -2,6 +2,7 @@ package fr.bloup.partyfinder.client.gui;
 
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.activity.Activities;
+import fr.bloup.partyfinder.client.net.BackendEvents;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -12,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 public class JoinRequestsScreen extends Screen {
-    private static final int ROW = 24;
+    private static final int ROW = 30;
     private static final int MAX_ROWS = 8;
     private static final int BUTTON = 54;
     private static final int MAX_WIDTH = 320;
@@ -75,8 +76,8 @@ public class JoinRequestsScreen extends Screen {
         int textRoom = rowWidth - 3 * BUTTON - 16;
         for (int i = 0; i < Math.min(requests.size(), MAX_ROWS); i++) {
             PartyFinderState.JoinRequest request = requests.get(i);
-            int y = top + 22 + i * ROW;
-            String badge = Component.translatable("partyfinder.report.badge", request.reports().count()).getString();
+            int y = top + 17 + i * ROW;
+            String badge = request.reports().badge();
             int badgeWidth = font.width(badge);
             String name = font.plainSubstrByWidth(request.player().name(), Math.max(0, textRoom - badgeWidth - 4));
             g.text(font, name, left, y, Activities.color("owner", 0xFFFFFF));
@@ -86,6 +87,9 @@ public class JoinRequestsScreen extends Screen {
             if (mouseX >= left && mouseX < badgeX + badgeWidth && mouseY >= y - 2 && mouseY < y + font.lineHeight + 2) {
                 g.setComponentTooltipForNextFrame(font, request.reports().describe(), mouseX, mouseY);
             }
+            String stats = TimeFormat.clip(font, BackendEvents.statsLine(request).getString(), textRoom);
+            g.text(font, stats, left, y + font.lineHeight + 1, request.unverified()
+                    ? Activities.color("status_connecting", 0xFFFF55) : Activities.color("stat", 0x55FFFF));
         }
         if (requests.isEmpty()) {
             g.centeredText(font, Component.translatable("partyfinder.requests.empty"), width / 2, top + 14,

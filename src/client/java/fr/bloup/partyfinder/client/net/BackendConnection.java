@@ -7,7 +7,9 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
+import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.Listing;
+import fr.bloup.partyfinder.client.party.ListingDraft;
 import fr.bloup.partyfinder.client.party.MemberStatus;
 import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.Moderation;
@@ -38,7 +40,7 @@ import java.util.regex.Pattern;
 
 public final class BackendConnection {
     private static final String BACKEND_URL = "wss://partyfinder.bloup.site";
-    private static final int PROTOCOL = 4;
+    private static final int PROTOCOL = 5;
     private static final int CLOSE_BANNED = 4004;
     private static final int CLOSE_OUTDATED = 4005;
     private static final int MAX_MESSAGE_CHARS = 4 * 1024 * 1024;
@@ -159,7 +161,13 @@ public final class BackendConnection {
         sendChain = sendChain.handle((r, e) -> null).thenCompose(v -> ws.sendText(text, true));
     }
 
-    public static void publish(String activity, Map<String, String> options, String note, String requirements, int maxSize, int maxReports) {
+    public static void publish(ListingDraft draft) {
+        publish(draft.activity(), draft.options(), draft.note(), draft.requirements(), draft.maxSize(), draft.maxReports(),
+                draft.minStats(), draft.roles());
+    }
+
+    public static void publish(String activity, Map<String, String> options, String note, String requirements, int maxSize, int maxReports,
+                               Map<String, Integer> minStats, List<String> roles) {
         JsonObject msg = message("publish");
         msg.addProperty("activity", activity);
         JsonObject optionsJson = new JsonObject();
@@ -169,6 +177,12 @@ public final class BackendConnection {
         msg.addProperty("requirements", requirements);
         msg.addProperty("maxSize", maxSize);
         msg.addProperty("maxReports", maxReports);
+        JsonObject minJson = new JsonObject();
+        minStats.forEach(minJson::addProperty);
+        msg.add("minStats", minJson);
+        JsonArray rolesJson = new JsonArray();
+        roles.forEach(rolesJson::add);
+        msg.add("roles", rolesJson);
         send(msg);
     }
 
@@ -196,6 +210,12 @@ public final class BackendConnection {
         party.forEach(uuid -> array.add(uuid.toString()));
         msg.add("party", array);
         if (status != null) msg.add("status", GSON.toJsonTree(status));
+        send(msg);
+    }
+
+    public static void endorse(UUID target) {
+        JsonObject msg = message("endorse");
+        msg.addProperty("target", target.toString());
         send(msg);
     }
 
@@ -367,7 +387,9 @@ public final class BackendConnection {
             case "join_request" -> {
                 Listing.Player from = player(msg.get("from"));
                 ReportSummary reports = reports(msg.get("reports"));
-                if (from != null) onClient(() -> BackendEvents.onJoinRequest(new PartyFinderState.JoinRequest(from, reports)));
+                JsonObject stats = msg.has("stats") && msg.get("stats").isJsonObject() ? msg.getAsJsonObject("stats") : null;
+                boolean unverified = msg.has("unverified") && msg.get("unverified").getAsBoolean();
+                if (from != null) onClient(() -> BackendEvents.onJoinRequest(new PartyFinderState.JoinRequest(from, reports, stats, unverified)));
             }
             case "join_response" -> {
                 Listing.Player owner = player(msg.get("owner"));
@@ -384,13 +406,29 @@ public final class BackendConnection {
                 MemberStatus status = MemberStatus.sanitize(GSON.fromJson(msg.get("status"), MemberStatus.class));
                 if (status != null) onClient(() -> PartyStatus.onRemote(uuid, status));
             }
+            case "events" -> {
+                List<EventAlerts.Event> events = new ArrayList<>();
+                for (JsonElement element : msg.getAsJsonArray("events")) {
+                    try {
+                        events.add(GSON.fromJson(element, EventAlerts.Event.class));
+                    } catch (RuntimeException ignored) {
+                    }
+                }
+                onClient(() -> EventAlerts.setEvents(events));
+            }
             case "party_removed" -> {
                 String listingId = msg.get("listing").getAsString();
                 onClient(() -> PartySync.onPartyRemoved(listingId));
             }
             case "error" -> {
                 String key = msg.get("key").getAsString();
-                onClient(() -> BackendEvents.onError(key));
+                List<String> args = new ArrayList<>();
+                if (msg.has("args") && msg.get("args").isJsonArray()) {
+                    for (JsonElement arg : msg.getAsJsonArray("args")) {
+                        if (args.size() < 8) args.add(Listing.cleanText(arg.getAsString(), 32));
+                    }
+                }
+                onClient(() -> BackendEvents.onError(key, args));
             }
             default -> Partyfinder.LOGGER.debug("Unknown backend message {}", type);
         }
@@ -429,7 +467,7 @@ public final class BackendConnection {
         try {
             Moderation.ReportedPlayer raw = GSON.fromJson(json, Moderation.ReportedPlayer.class);
             if (raw == null || raw.uuid() == null || !Listing.isValidName(raw.name())) return null;
-            ReportSummary summary = ReportSummary.sanitize(new ReportSummary(raw.count(), raw.reasons()));
+            ReportSummary summary = ReportSummary.sanitize(new ReportSummary(raw.count(), raw.reasons(), 0));
             return new Moderation.ReportedPlayer(raw.uuid(), raw.name(), summary.count(), summary.reasons(), raw.lastAt(), raw.banned());
         } catch (RuntimeException e) {
             return null;

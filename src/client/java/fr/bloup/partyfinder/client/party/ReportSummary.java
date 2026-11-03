@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public record ReportSummary(int count, Map<String, Integer> reasons) {
-    public static final ReportSummary NONE = new ReportSummary(0, Map.of());
+public record ReportSummary(int count, Map<String, Integer> reasons, int endorsements) {
+    public static final ReportSummary NONE = new ReportSummary(0, Map.of(), 0);
     public static final List<String> REASONS = List.of("spam", "scam", "toxic", "afk", "left", "griefing", "other");
     private static final Pattern REASON = Pattern.compile("[a-z_]{1,16}");
 
@@ -24,15 +24,21 @@ public record ReportSummary(int count, Map<String, Integer> reasons) {
                 }
             });
         }
-        return new ReportSummary(Math.clamp(raw.count(), 0, 9999), Map.copyOf(reasons));
+        return new ReportSummary(Math.clamp(raw.count(), 0, 9999), Map.copyOf(reasons), Math.clamp(raw.endorsements(), 0, 99_999));
     }
 
     public static Component reasonName(String reason) {
         return Component.translatable("partyfinder.report.reason." + reason);
     }
 
+    /** Compact "✔12 ⚠1" badge shown next to player names. */
+    public String badge() {
+        return Component.translatable("partyfinder.reputation.badge", endorsements, count).getString();
+    }
+
     public List<Component> describe() {
         List<Component> lines = new ArrayList<>();
+        if (endorsements > 0) lines.add(Component.translatable("partyfinder.reputation.endorsements", endorsements).withStyle(ChatFormatting.GREEN));
         lines.add(Component.translatable("partyfinder.report.count", count)
                 .withStyle(count > 0 ? ChatFormatting.RED : ChatFormatting.GREEN));
         reasons.entrySet().stream()

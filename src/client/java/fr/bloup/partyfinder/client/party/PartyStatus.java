@@ -7,7 +7,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 
+import fr.bloup.partyfinder.client.hud.DungeonTab;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -32,6 +35,9 @@ public final class PartyStatus {
     }
 
     private static final Map<UUID, Remote> REMOTE = new HashMap<>();
+    private static final Set<String> CHAT_DEAD = new HashSet<>();
+    private static final Pattern CHAT_DEATH = Pattern.compile("☠ ([A-Za-z0-9_]{1,16}) .*(?:killed|died|ghost)");
+    private static final Pattern CHAT_REVIVE = Pattern.compile("([A-Za-z0-9_]{1,16}) was revived");
 
     private static int health;
     private static int maxHealth;
@@ -44,6 +50,36 @@ public final class PartyStatus {
     private static long lastSentAt;
 
     private PartyStatus() {
+    }
+
+    /**
+     * Death fallback for party members without the mod, from the dungeon chat. Members with the mod report their
+     * own state, which always wins over this.
+     */
+    public static void onChat(Component message) {
+        if (!"dungeon".equals(HypixelBridge.mode())) {
+            CHAT_DEAD.clear();
+            return;
+        }
+        String text = message.getString().strip();
+        Matcher m = CHAT_DEATH.matcher(text);
+        if (m.find()) {
+            CHAT_DEAD.add(m.group(1).toLowerCase(Locale.ROOT));
+            return;
+        }
+        m = CHAT_REVIVE.matcher(text);
+        if (m.find()) CHAT_DEAD.remove(m.group(1).toLowerCase(Locale.ROOT));
+    }
+
+    public static boolean diedInChat(String name) {
+        return name != null && CHAT_DEAD.contains(name.toLowerCase(Locale.ROOT));
+    }
+
+    /** Own death in dungeons: ghosts can fly there, and the tab list may also say DEAD. */
+    private static boolean selfDead(LocalPlayer player) {
+        if (!DungeonTab.inDungeon()) return false;
+        DungeonTab.Info tab = DungeonTab.of(player.getGameProfile().name());
+        return player.getAbilities().mayfly || tab != null && tab.dead();
     }
 
     public static void onActionBar(Component message) {
@@ -88,7 +124,8 @@ public final class PartyStatus {
                 fresh ? defense : 0,
                 HypixelBridge.mode(),
                 HypixelBridge.map(),
-                MemberStatus.equipmentOf(player));
+                MemberStatus.equipmentOf(player),
+                selfDead(player));
     }
 
     public static Optional<MemberStatus> remote(UUID uuid) {
@@ -129,5 +166,6 @@ public final class PartyStatus {
         lastParty = Set.of();
         lastSentAt = 0;
         actionBarAt = 0;
+        CHAT_DEAD.clear();
     }
 }

@@ -2,15 +2,21 @@ package fr.bloup.partyfinder.client.gui;
 
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.MenuLayout;
-import fr.bloup.partyfinder.client.hud.HudConfigScreen;
+import fr.bloup.partyfinder.client.PartyActions;
+import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
+import fr.bloup.partyfinder.client.party.ListingDraft;
+import fr.bloup.partyfinder.client.party.ListingDrafts;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -20,17 +26,23 @@ import net.minecraft.resources.Identifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 public class CategoryMenuScreen extends Screen {
     private static final Identifier SLOT_HIGHLIGHT_BACK = Identifier.withDefaultNamespace("container/slot_highlight_back");
     private static final Identifier SLOT_HIGHLIGHT_FRONT = Identifier.withDefaultNamespace("container/slot_highlight_front");
     private static final int IMAGE_WIDTH = 176;
+    private static final int PANEL_GAP = 4;
+    private static final int PANEL_HEIGHT = 17 + 24 + 7;
 
     private final Screen parent;
     private MenuLayout layout;
     private int left;
     private int top;
     private int imageHeight;
+    private int panelTop;
+    private Button launchButton;
+    private Button leaveButton;
 
     public CategoryMenuScreen(Screen parent) {
         super(Component.translatable("partyfinder.screen.title"));
@@ -45,7 +57,71 @@ public class CategoryMenuScreen extends Screen {
         if (PartyFinderState.isOp()) BackendConnection.opReports();
         imageHeight = layout.rows() * 18 + 24;
         left = (width - IMAGE_WIDTH) / 2;
-        top = (height - imageHeight) / 2;
+        top = Math.max(4, (height - imageHeight - PANEL_GAP - PANEL_HEIGHT) / 2);
+        panelTop = top + imageHeight + PANEL_GAP;
+
+        int buttonWidth = (IMAGE_WIDTH - 16 - 4) / 2;
+        launchButton = addRenderableWidget(Button.builder(Component.translatable("partyfinder.menu.launch"), b -> {
+            if (PartySync.currentListing().isEmpty()) {
+                // Not in a finder party: the left button republishes the last listing in one click.
+                ListingDrafts.last().ifPresent(BackendConnection::publish);
+            } else if (PartySync.launch()) {
+                onClose();
+            }
+        }).bounds(left + 8, panelTop + 17, buttonWidth, 20).build());
+        leaveButton = addRenderableWidget(Button.builder(Component.empty(), b -> leaveOrDisband())
+                .bounds(left + 8 + buttonWidth + 4, panelTop + 17, buttonWidth, 20).build());
+        updatePanel();
+    }
+
+    @Override
+    public void tick() {
+        updatePanel();
+    }
+
+    private void updatePanel() {
+        if (launchButton == null) return;
+        Optional<Listing> listing = PartySync.currentListing();
+        boolean host = PartyFinderState.ownListing().isPresent();
+        Optional<ListingDraft> last = ListingDrafts.last();
+        if (listing.isEmpty() && last.isPresent()) {
+            launchButton.setMessage(Component.translatable("partyfinder.menu.republish"));
+            launchButton.active = BackendConnection.isConnected() && HypixelBridge.isLeaderOrSolo();
+            launchButton.setTooltip(Tooltip.create(Component.translatable("partyfinder.menu.republish.tooltip",
+                    Activities.get(last.get().activity()).title(last.get().options()))));
+        } else {
+            launchButton.setMessage(Component.translatable("partyfinder.menu.launch"));
+            launchButton.active = listing.map(PartySync::canLaunch).orElse(false);
+            launchButton.setTooltip(launchButton.active ? null : Tooltip.create(Component.translatable(listing.isPresent()
+                    ? "partyfinder.error.cannot_launch" : "partyfinder.error.not_in_finder_party")));
+        }
+        leaveButton.active = listing.isPresent() || HypixelBridge.inParty();
+        // Only the Hypixel party leader may disband; a listing host who is not leader can only delist.
+        boolean leader = HypixelBridge.isLeaderOrSolo();
+        leaveButton.setMessage(Component.translatable(leader && (host || HypixelBridge.inParty()) ? "partyfinder.menu.disband"
+                : host ? "partyfinder.menu.delist" : "partyfinder.menu.leave"));
+    }
+
+    private void leaveOrDisband() {
+        boolean listingHost = PartyFinderState.ownListing().isPresent();
+        boolean leader = HypixelBridge.isLeaderOrSolo();
+        boolean host = leader && (listingHost || HypixelBridge.inParty());
+        if (listingHost && !leader) {
+            BackendConnection.delist();
+            return;
+        }
+        Component title = Component.translatable(host ? "partyfinder.menu.disband.confirm" : "partyfinder.menu.leave.confirm");
+        minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
+            if (confirmed) {
+                if (host) {
+                    if (PartyFinderState.ownListing().isPresent()) BackendConnection.delist();
+                    if (HypixelBridge.inParty()) PartyActions.command("party disband");
+                } else if (!PartySync.leave() && HypixelBridge.inParty()) {
+                    PartyActions.command("party leave");
+                }
+            }
+            minecraft.gui.setScreen(this);
+        }, title, Component.translatable(host ? "partyfinder.menu.disband.warning" : "partyfinder.menu.leave.warning")));
     }
 
     @Override
@@ -93,7 +169,23 @@ public class CategoryMenuScreen extends Screen {
             }
         }
 
+        drawPanel(g);
         if (hovered != null) g.setComponentTooltipForNextFrame(font, tooltip(hovered), mouseX, mouseY);
+    }
+
+    /** "My party" panel under the chest, drawn from the same container texture so resource packs restyle it too. */
+    private void drawPanel(GuiGraphicsExtractor g) {
+        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop, 0, 0, IMAGE_WIDTH, 17, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop + 17, 0, 128, IMAGE_WIDTH, 24, IMAGE_WIDTH, 1, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop + 17 + 24, 0, 215, IMAGE_WIDTH, 7, 256, 256);
+        int color = Activities.color("menu_title", 0x404040);
+        Component label = PartySync.currentListing()
+                .map(l -> (Component) Component.translatable("partyfinder.menu.my_party",
+                        Activities.get(l.activity()).title(l.options()), l.size(), l.maxSize()))
+                .orElseGet(() -> HypixelBridge.inParty()
+                        ? Component.translatable("partyfinder.menu.my_party.hypixel", HypixelBridge.members().size())
+                        : Component.translatable("partyfinder.menu.my_party.none"));
+        g.text(font, TimeFormat.clip(font, label.getString(), IMAGE_WIDTH - 16), left + 8, panelTop + 6, color, false);
     }
 
     @Override
@@ -110,10 +202,9 @@ public class CategoryMenuScreen extends Screen {
             case REQUESTS -> minecraft.gui.setScreen(new JoinRequestsScreen(this));
             case MODERATION -> minecraft.gui.setScreen(new ModerationScreen(this));
             case RECONNECT -> BackendConnection.reconnect();
-            case HUD -> minecraft.gui.setScreen(new HudConfigScreen(this));
             case SETTINGS -> minecraft.gui.setScreen(new SettingsScreen(this));
-            case LAUNCH -> {
-                if (PartySync.launch()) onClose();
+            case HISTORY -> minecraft.gui.setScreen(new HistoryScreen(this));
+            case HUD, LAUNCH -> {
             }
             case CLOSE -> onClose();
         }
@@ -165,24 +256,15 @@ public class CategoryMenuScreen extends Screen {
                 lines.add(Component.empty());
                 lines.add(PartyFinderState.selfReports().describe().getFirst());
             }
+            case HISTORY -> {
+                lines.add(Component.translatable("partyfinder.history.title").withStyle(ChatFormatting.GREEN));
+                lines.add(Component.translatable("partyfinder.menu.history.desc").withStyle(ChatFormatting.GRAY));
+            }
             case SETTINGS -> {
                 lines.add(Component.translatable("partyfinder.settings.title").withStyle(ChatFormatting.GREEN));
                 lines.add(Component.translatable("partyfinder.menu.settings.desc").withStyle(ChatFormatting.GRAY));
             }
-            case HUD -> {
-                lines.add(Component.translatable("partyfinder.hud.title").withStyle(ChatFormatting.GREEN));
-                lines.add(Component.translatable("partyfinder.menu.hud.desc").withStyle(ChatFormatting.GRAY));
-            }
-            case LAUNCH -> {
-                lines.add(Component.translatable("partyfinder.menu.launch").withStyle(ChatFormatting.GREEN));
-                PartySync.currentListing().ifPresentOrElse(listing -> {
-                    lines.add(Activities.get(listing.activity()).title(listing.options()).copy().withStyle(ChatFormatting.GRAY));
-                    lines.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withStyle(ChatFormatting.GRAY));
-                    lines.add(Component.empty());
-                    lines.add(PartySync.canLaunch(listing)
-                            ? Component.translatable("partyfinder.menu.launch.click").withStyle(ChatFormatting.YELLOW)
-                            : Component.translatable("partyfinder.error.cannot_launch").withStyle(ChatFormatting.RED));
-                }, () -> lines.add(Component.translatable("partyfinder.error.not_in_finder_party").withStyle(ChatFormatting.RED)));
+            case HUD, LAUNCH -> {
             }
             case CLOSE -> lines.add(Component.translatable("partyfinder.menu.close").withStyle(ChatFormatting.RED));
         }

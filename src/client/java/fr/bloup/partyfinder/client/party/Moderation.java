@@ -7,7 +7,7 @@ import java.util.UUID;
 public final class Moderation {
     public record ReportedPlayer(UUID uuid, String name, int count, Map<String, Integer> reasons, long lastAt, boolean banned) {
         public ReportSummary summary() {
-            return new ReportSummary(count, reasons == null ? Map.of() : reasons);
+            return new ReportSummary(count, reasons == null ? Map.of() : reasons, 0);
         }
     }
 

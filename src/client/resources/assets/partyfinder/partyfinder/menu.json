@@ -70,19 +70,44 @@
       "icon": "minecraft:comparator"
     },
     {
-      "slot": 33,
-      "action": "launch",
-      "icon": "minecraft:ender_eye"
-    },
-    {
-      "slot": 34,
-      "action": "hud",
-      "icon": "minecraft:painting"
-    },
-    {
       "slot": 28,
       "action": "settings",
       "icon": "minecraft:repeater"
+    },
+    {
+      "slot": 29,
+      "action": "history",
+      "icon": "minecraft:clock"
+    },
+    {
+      "slot": 19,
+      "action": "category",
+      "category": "crimson",
+      "icon": "minecraft:blaze_powder"
+    },
+    {
+      "slot": 20,
+      "action": "category",
+      "category": "rift",
+      "icon": "minecraft:ender_eye"
+    },
+    {
+      "slot": 21,
+      "action": "category",
+      "category": "world_boss",
+      "icon": "minecraft:dragon_egg"
+    },
+    {
+      "slot": 23,
+      "action": "category",
+      "category": "grind",
+      "icon": "minecraft:iron_sword"
+    },
+    {
+      "slot": 24,
+      "action": "category",
+      "category": "social",
+      "icon": "minecraft:emerald"
     }
   ]
 }

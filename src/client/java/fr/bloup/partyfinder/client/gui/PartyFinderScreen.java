@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class PartyFinderScreen extends Screen {
     private static final int LIST_TOP = 48;
@@ -26,6 +27,7 @@ public class PartyFinderScreen extends Screen {
 
     private final Screen parent;
     private final String category;
+    private final Set<String> activities;
     private final Runnable listener = this::refresh;
 
     private String search = "";
@@ -37,11 +39,17 @@ public class PartyFinderScreen extends Screen {
     private Button reportButton;
 
     public PartyFinderScreen(Screen parent, String category) {
-        super(category.isEmpty()
+        this(parent, category, Set.of(), category.isEmpty()
                 ? Component.translatable("partyfinder.category.all")
                 : Component.translatable("partyfinder.category." + category));
+    }
+
+    /** Listing filtered to specific activities (e.g. the ones of a SkyBlock event). */
+    public PartyFinderScreen(Screen parent, String category, Set<String> activities, Component title) {
+        super(title);
         this.parent = parent;
         this.category = category;
+        this.activities = activities;
     }
 
     @Override
@@ -117,6 +125,7 @@ public class PartyFinderScreen extends Screen {
         List<Listing> filtered = PartyFinderState.listings().stream().filter(l -> {
             Activity activity = Activities.get(l.activity());
             if (!category.isEmpty() && !activity.category().equals(category)) return false;
+            if (!activities.isEmpty() && !activities.contains(activity.id())) return false;
             if (query.isEmpty()) return true;
             return activity.name().getString().toLowerCase(Locale.ROOT).contains(query)
                     || l.owner().name().toLowerCase(Locale.ROOT).contains(query)

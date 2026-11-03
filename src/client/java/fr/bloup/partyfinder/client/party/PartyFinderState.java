@@ -1,5 +1,7 @@
 package fr.bloup.partyfinder.client.party;
 
+import com.google.gson.JsonObject;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -14,7 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class PartyFinderState {
     public enum Status { OFFLINE, CONNECTING, ONLINE }
 
-    public record JoinRequest(Listing.Player player, ReportSummary reports) {
+    /** stats is the requester's compact SkyBlock summary; unverified when the server could not check requirements. */
+    public record JoinRequest(Listing.Player player, ReportSummary reports, JsonObject stats, boolean unverified) {
     }
 
     private static final Map<String, Listing> LISTINGS = new LinkedHashMap<>();
@@ -95,7 +98,8 @@ public final class PartyFinderState {
 
     public static List<Listing> listings() {
         List<Listing> list = new ArrayList<>(LISTINGS.values());
-        list.sort(Comparator.comparingLong(Listing::createdAt).reversed());
+        // Full parties always sink to the bottom; newest first within each group.
+        list.sort(Comparator.comparing(Listing::isFull).thenComparing(Comparator.comparingLong(Listing::createdAt).reversed()));
         return list;
     }
 

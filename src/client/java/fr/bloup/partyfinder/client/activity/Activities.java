@@ -54,6 +54,11 @@ public final class Activities {
         return List.copyOf(BY_ID.values());
     }
 
+    /** Activities a SkyBlock event is relevant for ("events" field in activities.json). */
+    public static List<Activity> forEvent(String event) {
+        return BY_ID.values().stream().filter(a -> a.events().contains(event)).toList();
+    }
+
     public static List<String> categories() {
         return List.copyOf(CATEGORIES);
     }
@@ -61,7 +66,7 @@ public final class Activities {
     public static Activity get(String id) {
         Activity activity = BY_ID.get(id);
         if (activity != null) return activity;
-        return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5, List.of(), Activity.Launch.NONE, List.of("sb"));
+        return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5, List.of(), Activity.Launch.NONE, List.of("sb"), List.of());
     }
 
     public static int color(String key, int fallback) {
@@ -120,7 +125,10 @@ public final class Activities {
         }
         List<String> stats = new ArrayList<>();
         if (json.has("stats")) json.getAsJsonArray("stats").forEach(e -> stats.add(e.getAsString()));
-        return new Activity(id, category, icon, sprite, color, Math.max(2, maxSize), List.copyOf(options), launch, List.copyOf(stats));
+        List<String> events = new ArrayList<>();
+        if (json.has("events")) json.getAsJsonArray("events").forEach(e -> events.add(e.getAsString()));
+        return new Activity(id, category, icon, sprite, color, Math.max(2, maxSize), List.copyOf(options), launch, List.copyOf(stats),
+                List.copyOf(events));
     }
 
     private static int parseColor(String value, int fallback) {

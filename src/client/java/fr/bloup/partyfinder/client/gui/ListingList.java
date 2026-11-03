@@ -18,6 +18,7 @@ import net.minecraft.network.chat.MutableComponent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class ListingList extends ObjectSelectionList<ListingList.Entry> {
     public static final int ROW_HEIGHT = 40;
@@ -111,7 +112,7 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
             String title = clip(font, fullTitle.getString(), titleRoom);
             g.text(font, title, textX, line1, 0xFF000000 | activity.color());
             ReportSummary reports = listing.ownerReports();
-            String badge = Component.translatable("partyfinder.report.badge", reports.count()).getString();
+            String badge = reports.badge();
             int badgeWidth = font.width(badge);
             int ownerX = textX + font.width(title) + 6;
             int ownerRoom = right - slotsWidth - 6 - ownerX - badgeWidth - 4;
@@ -137,8 +138,9 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
                 g.text(font, clipped, line3X, line3, blocked ? Activities.color("reports_some", 0xFF5555) : Activities.color("report_limit", 0xAAAAAA));
                 line3X += font.width(clipped) + 6;
             }
-            if (!listing.requirements().isEmpty()) {
-                String req = clip(font, listing.requirements(), line3Right - line3X);
+            String needs = needs(listing);
+            if (!needs.isEmpty()) {
+                String req = clip(font, needs, line3Right - line3X);
                 g.text(font, req, line3X, line3, Activities.color("requirements", 0xFFAA00));
             }
 
@@ -151,6 +153,17 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
                 if (listing.hasReportLimit()) {
                     tooltip.add(Component.translatable("partyfinder.listing.max_reports.tooltip", listing.maxReports()).withColor(0xAAAAAA));
                 }
+                if (!listing.minStats().isEmpty()) {
+                    tooltip.add(Component.translatable("partyfinder.listing.min_stats", listing.minStats().entrySet().stream()
+                            .map(e -> StatFormat.requirement(e.getKey(), e.getValue()).getString())
+                            .collect(Collectors.joining(", "))).withColor(0xFFAA00));
+                }
+                List<String> open = openRoles(listing);
+                if (!listing.roles().isEmpty()) {
+                    tooltip.add(open.isEmpty()
+                            ? Component.translatable("partyfinder.listing.roles.filled").withColor(0x55FF55)
+                            : Component.translatable("partyfinder.listing.roles.open", classNames(open)).withColor(0x55FFFF));
+                }
                 tooltip.addAll(reports.describe());
                 tooltip.add(Component.empty());
                 tooltip.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withColor(0xFFFFFF));
@@ -158,6 +171,30 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
                 g.setComponentTooltipForNextFrame(font, tooltip, mouseX, mouseY);
             }
         }
+    }
+
+    /** Wanted dungeon roles not yet covered by a member's selected class. */
+    static List<String> openRoles(Listing listing) {
+        List<String> open = new ArrayList<>(listing.roles());
+        for (Listing.Member member : listing.members()) {
+            if (member.stats() == null || !member.stats().has("selectedClass")) continue;
+            open.remove(member.stats().get("selectedClass").getAsString());
+        }
+        return open;
+    }
+
+    private static String classNames(List<String> classes) {
+        return classes.stream().map(c -> StatFormat.className(c).getString()).collect(Collectors.joining(", "));
+    }
+
+    /** Short "needs" line: open roles, verified minimum stats, then the leader's free text. */
+    private static String needs(Listing listing) {
+        List<String> parts = new ArrayList<>();
+        List<String> open = openRoles(listing);
+        if (!open.isEmpty()) parts.add(Component.translatable("partyfinder.listing.roles.short", classNames(open)).getString());
+        listing.minStats().forEach((id, min) -> parts.add(StatFormat.requirement(id, min).getString()));
+        if (!listing.requirements().isEmpty()) parts.add(listing.requirements());
+        return String.join(" · ", parts);
     }
 
     private static Component memberLine(Listing listing, Activity activity, Listing.Member member) {

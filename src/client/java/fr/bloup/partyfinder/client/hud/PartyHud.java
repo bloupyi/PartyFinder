@@ -40,8 +40,9 @@ public final class PartyHud implements HudElement {
     private static final int GEAR_SIZE = 12;
 
     /** Everything one frame needs; entity is set when the member is loaded close enough to be read locally. */
+    /** shared: status comes from the member's own client (mod installed), so its dead flag is authoritative. */
     public record Member(UUID uuid, String name, boolean leader, boolean self, MemberStatus status, LivingEntity entity,
-                         float distance, List<Component> stats) {
+                         float distance, List<Component> stats, boolean shared) {
     }
 
     public record Bounds(int x, int y, int width, int height) {
@@ -88,9 +89,11 @@ public final class PartyHud implements HudElement {
             float distance = nearby == null || isSelf ? -1 : nearby.distanceTo(mc.player);
             boolean local = nearby != null && (isSelf || distance <= cfg.localRange);
             MemberStatus status = isSelf ? PartyStatus.self() : PartyStatus.remote(uuid).orElse(null);
-            if (status == null && local) {
+            boolean shared = status != null;
+            if (status == null && nearby != null) {
+                // No shared status (member without the mod): the loaded entity still gives health % and gear.
                 status = new MemberStatus(nearby.getGameProfile().name(), nearby.getHealth() / Math.max(1f, nearby.getMaxHealth()),
-                        0, 0, 0, 0, 0, "", "", MemberStatus.equipmentOf(nearby));
+                        0, 0, 0, 0, 0, "", "", MemberStatus.equipmentOf(nearby), false);
             }
             List<Component> stats = List.of();
             if (listing != null) {
@@ -99,7 +102,7 @@ public final class PartyHud implements HudElement {
                 }
             }
             members.add(new Member(uuid, nameOf(uuid, status, listing), HypixelBridge.role(uuid) == HypixelBridge.Role.LEADER
-                    && HypixelBridge.inParty(), isSelf, status, local ? nearby : null, local ? distance : -1, stats));
+                    && HypixelBridge.inParty(), isSelf, status, local ? nearby : null, distance, stats, shared));
         }
         return members;
     }
@@ -129,6 +132,15 @@ public final class PartyHud implements HudElement {
         };
     }
 
+    /** Portrait box: a square head, or a fixed-height model so it never grows with the frame. */
+    static int portraitHeight(Hud cfg) {
+        return switch (cfg.portrait) {
+            case NONE -> 0;
+            case HEAD -> cfg.compact ? 16 : 24;
+            case MODEL -> cfg.compact ? 30 : 40;
+        };
+    }
+
     static int frameHeight(Hud cfg) {
         Font font = Minecraft.getInstance().font;
         int h = font.lineHeight;
@@ -137,12 +149,7 @@ public final class PartyHud implements HudElement {
         if (cfg.healthText != PartyFinderConfig.HealthText.NONE || cfg.showDefense) h += 2 + font.lineHeight;
         if (cfg.showStats && !cfg.compact) h += 1 + font.lineHeight;
         if (cfg.showArmor || cfg.showHeldItem) h += 2 + GEAR_SIZE;
-        int portrait = switch (cfg.portrait) {
-            case NONE -> 0;
-            case HEAD -> cfg.compact ? 16 : 24;
-            case MODEL -> cfg.compact ? 30 : 40;
-        };
-        return Math.max(h, portrait) + 2 * PAD;
+        return Math.max(h, portraitHeight(cfg)) + 2 * PAD;
     }
 
     public static Bounds bounds(Hud cfg, int count, int screenWidth, int screenHeight) {
@@ -182,10 +189,14 @@ public final class PartyHud implements HudElement {
             Member member = members.get(i);
             drawFrame(g, member, cfg, fx, fy, fw, fh);
             if (cfg.portrait == PartyFinderConfig.Portrait.MODEL && !Portraits.isBroken(member.uuid())) {
-                int x0 = Math.round(bounds.x() + (fx + PAD) * scale);
-                int y0 = Math.round(bounds.y() + (fy + PAD) * scale);
-                int x1 = Math.round(bounds.x() + (fx + portraitWidth(cfg)) * scale);
-                int y1 = Math.round(bounds.y() + (fy + fh - PAD) * scale);
+                int boxWidth = portraitWidth(cfg) - PAD;
+                int boxHeight = portraitHeight(cfg);
+                int boxX = cfg.side == PartyFinderConfig.Side.RIGHT ? fx + fw - PAD - boxWidth : fx + PAD;
+                int boxY = fy + (fh - boxHeight) / 2;
+                int x0 = Math.round(bounds.x() + boxX * scale);
+                int y0 = Math.round(bounds.y() + boxY * scale);
+                int x1 = Math.round(bounds.x() + (boxX + boxWidth) * scale);
+                int y1 = Math.round(bounds.y() + (boxY + boxHeight) * scale);
                 models.add(() -> drawModel(g, member, cfg, x0, y0, x1, y1));
             }
         }
@@ -202,80 +213,96 @@ public final class PartyHud implements HudElement {
             g.blitSprite(RenderPipelines.GUI_TEXTURED, m.self() ? PfSprites.HUD_FRAME_SELF : PfSprites.HUD_FRAME, x, y, w, h, tint);
         }
 
-        int px = x + PAD;
-        int py = y + PAD;
+        boolean flip = cfg.side == PartyFinderConfig.Side.RIGHT;
         boolean head = cfg.portrait == PartyFinderConfig.Portrait.HEAD
                 || cfg.portrait == PartyFinderConfig.Portrait.MODEL && Portraits.isBroken(m.uuid());
         if (head) {
             int size = cfg.compact ? 16 : 24;
+            int px = flip ? x + w - PAD - size : x + PAD;
+            int py = y + (h - size) / 2;
             PlayerSkin skin = Portraits.tabSkin(m.uuid());
             if (skin != null) PlayerFaceExtractor.extractRenderState(g, skin, px, py, size);
             else PlayerFaceExtractor.extractRenderState(g, Portraits.profile(m.uuid()), px, py, size);
         }
 
-        int cx = x + PAD + portraitWidth(cfg);
-        int right = x + w - PAD;
+        int cx = flip ? x + PAD : x + PAD + portraitWidth(cfg);
+        int right = flip ? x + w - PAD - portraitWidth(cfg) : x + w - PAD;
         int cy = y + PAD;
         boolean shadow = cfg.textShadow;
         MemberStatus status = m.status();
+        DungeonTab.Info dungeon = cfg.showDungeonClass ? DungeonTab.of(m.name()) : null;
+        // The member's own client is authoritative; without the mod, fall back to the tab list, then the chat.
+        boolean dead = DungeonTab.inDungeon() && (m.shared() ? status.dead()
+                : dungeon != null && dungeon.dead() || PartyStatus.diedInChat(m.name()));
 
         String side = "";
         if (cfg.showDistance && m.distance() >= 0) side = Math.round(m.distance()) + "m";
         else if (cfg.showLocation && status != null) side = locationLabel(status);
         int sideWidth = side.isEmpty() ? 0 : font.width(side);
-        if (!side.isEmpty()) g.text(font, side, right - sideWidth, cy, Activities.color("hud_info", 0xAAAAAA), shadow);
+        if (!side.isEmpty()) g.text(font, side, flip ? cx : right - sideWidth, cy, Activities.color("hud_info", 0xAAAAAA), shadow);
         if (cfg.showName) {
             String prefix = cfg.showLeader && m.leader() ? "★ " : "";
-            String name = clip(font, prefix + m.name(), right - sideWidth - 4 - cx);
-            int color = m.leader() && cfg.showLeader ? Activities.color("hud_leader", 0xFFAA00)
+            String tag = dungeon != null && dungeon.dungeonClass() != null
+                    ? "[" + Character.toUpperCase(dungeon.dungeonClass().charAt(0)) + "] " : "";
+            String suffix = dead ? " ☠" : "";
+            int room = right - sideWidth - 4 - cx - font.width(tag);
+            String name = clip(font, prefix + m.name() + suffix, room);
+            int color = dead ? Activities.color("hud_dead", 0x777777)
+                    : m.leader() && cfg.showLeader ? Activities.color("hud_leader", 0xFFAA00)
                     : m.self() ? Activities.color("hud_self", 0x55FFFF) : Activities.color("hud_name", 0xFFFFFF);
-            g.text(font, name, cx, cy, color, shadow);
+            int width = font.width(tag) + font.width(name);
+            int nx = flip ? right - width : cx;
+            if (!tag.isEmpty()) {
+                g.text(font, tag, nx, cy, Activities.color("class_" + dungeon.dungeonClass(), 0xFFFFFF), shadow);
+            }
+            g.text(font, name, nx + font.width(tag), cy, color, shadow);
         }
         cy += font.lineHeight;
 
         if (cfg.showHealthBar) {
             cy += 2;
-            float ratio = status == null ? 0 : status.healthRatio();
-            int color = status == null ? Activities.color("hud_unknown", 0x555555)
+            float ratio = dead || status == null ? 0 : status.healthRatio();
+            int color = dead || status == null ? Activities.color("hud_unknown", 0x555555)
                     : ratio > 0.5f ? Activities.color("hud_health_high", 0x55FF55)
                     : ratio > 0.25f ? Activities.color("hud_health_mid", 0xFFFF55) : Activities.color("hud_health_low", 0xFF5555);
-            bar(g, cx, cy, right - cx, BAR_HEIGHT, status == null ? 1 : ratio, color);
+            bar(g, cx, cy, right - cx, BAR_HEIGHT, status == null && !dead ? 1 : ratio, color, flip);
             cy += BAR_HEIGHT;
         }
         if (cfg.showManaBar) {
             cy += 1;
             boolean known = status != null && status.maxMana() > 0;
             bar(g, cx, cy, right - cx, MANA_HEIGHT, known ? (float) status.mana() / status.maxMana() : 0,
-                    Activities.color("hud_mana", 0x5555FF));
+                    Activities.color("hud_mana", 0x5555FF), flip);
             cy += MANA_HEIGHT;
         }
         if (cfg.healthText != PartyFinderConfig.HealthText.NONE || cfg.showDefense) {
             cy += 2;
-            String info = infoLine(status, cfg);
-            g.text(font, clip(font, info, right - cx), cx, cy, status == null
+            String info = clip(font, infoLine(status, cfg), right - cx);
+            g.text(font, info, flip ? right - font.width(info) : cx, cy, status == null
                     ? Activities.color("hud_unknown", 0x808080) : Activities.color("hud_info", 0xAAAAAA), shadow);
             cy += font.lineHeight;
         }
         if (cfg.showStats && !cfg.compact) {
             cy += 1;
             String stats = String.join(" · ", m.stats().stream().map(Component::getString).toList());
-            if (!stats.isEmpty()) g.text(font, clip(font, stats, right - cx), cx, cy, Activities.color("stat", 0x55FFFF), shadow);
+            stats = clip(font, stats, right - cx);
+            if (!stats.isEmpty()) g.text(font, stats, flip ? right - font.width(stats) : cx, cy, Activities.color("stat", 0x55FFFF), shadow);
             cy += font.lineHeight;
         }
         if ((cfg.showArmor || cfg.showHeldItem) && status != null) {
             cy += 2;
-            int gx = cx;
+            int gx = flip ? right - GEAR_SIZE : cx;
             for (MemberStatus.Gear gear : status.equipment()) {
                 boolean held = "mainhand".equals(gear.slot());
                 if (held ? !cfg.showHeldItem : !cfg.showArmor) continue;
-                if (gx + GEAR_SIZE > right) break;
+                if (gx < cx || gx + GEAR_SIZE > right) break;
                 ItemStack stack = gear.toStack();
                 g.pose().pushMatrix();
                 g.pose().translate(gx, cy);
                 g.pose().scale(GEAR_SIZE / 16f, GEAR_SIZE / 16f);
                 g.item(stack, 0, 0);
                 g.pose().popMatrix();
-                gx += GEAR_SIZE + 1;
+                gx += flip ? -(GEAR_SIZE + 1) : GEAR_SIZE + 1;
             }
         }
     }
@@ -284,6 +311,7 @@ public final class PartyHud implements HudElement {
         LivingEntity entity = m.entity();
         if (entity == null) entity = Portraits.stand(m.uuid(), m.status() == null ? null : m.status().equipment());
         if (entity == null) return;
+        // Fixed box height, so the model keeps the same size whatever rows the frame shows.
         int size = Math.max(4, Math.round((y1 - y0) / 2.1f));
         float centerX = (x0 + x1) / 2f;
         float centerY = (y0 + y1) / 2f;
@@ -326,10 +354,12 @@ public final class PartyHud implements HudElement {
         return String.valueOf(value);
     }
 
-    private static void bar(GuiGraphicsExtractor g, int x, int y, int w, int h, float ratio, int color) {
+    private static void bar(GuiGraphicsExtractor g, int x, int y, int w, int h, float ratio, int color, boolean reverse) {
         g.fill(x, y, x + w, y + h, Activities.color("hud_bar_background", 0x000000) & 0x80FFFFFF);
         int filled = Math.round(w * Math.clamp(ratio, 0f, 1f));
-        if (filled > 0) g.fill(x, y, x + filled, y + h, color);
+        if (filled <= 0) return;
+        if (reverse) g.fill(x + w - filled, y, x + w, y + h, color);
+        else g.fill(x, y, x + filled, y + h, color);
     }
 
     private static String clip(Font font, String text, int maxWidth) {

@@ -30,7 +30,8 @@ public record MemberStatus(
         int defense,
         String location,
         String map,
-        List<Gear> equipment
+        List<Gear> equipment,
+        boolean dead
 ) {
     public static final List<EquipmentSlot> SLOTS = List.of(EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
             EquipmentSlot.FEET, EquipmentSlot.MAINHAND);
@@ -110,6 +111,7 @@ public record MemberStatus(
                 Math.clamp(raw.defense(), 0, 10_000_000),
                 LOCATION.matcher(location).matches() ? location : "",
                 Listing.cleanText(raw.map(), 32),
-                List.copyOf(gear));
+                List.copyOf(gear),
+                raw.dead());
     }
 }

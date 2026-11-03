@@ -21,7 +21,7 @@ public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Sl
     private static final Identifier FILE = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/menu.json");
     private static final Identifier DEFAULT_TEXTURE = Identifier.withDefaultNamespace("textures/gui/container/generic_54.png");
 
-    public enum Action { CATEGORY, ALL, CREATE, REQUESTS, CLOSE, MODERATION, RECONNECT, LAUNCH, HUD, SETTINGS }
+    public enum Action { CATEGORY, ALL, CREATE, REQUESTS, CLOSE, MODERATION, RECONNECT, LAUNCH, HUD, SETTINGS, HISTORY }
 
     public record Slot(int index, Action action, String category, ItemStack icon) {
     }

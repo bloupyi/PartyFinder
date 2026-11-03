@@ -30,6 +30,9 @@ public final class PartySync {
     private static String joinedListingId;
     private static long joinedAt;
     private static long lastSync;
+    private static Listing lastSeen;
+    private static String lastMode = "";
+    private static String delistedFor;
 
     private PartySync() {
     }
@@ -44,6 +47,7 @@ public final class PartySync {
     }
 
     public static void tick(Minecraft mc) {
+        trackHistory(mc);
         boolean online = BackendConnection.isConnected();
         boolean needsParty = online && currentListing().isPresent();
         HypixelBridge.tick(needsParty);
@@ -51,7 +55,15 @@ public final class PartySync {
         long now = System.currentTimeMillis();
 
         PartyFinderState.ownListing().ifPresent(listing -> {
-            if (!HypixelBridge.isKnown() || !HypixelBridge.isLeaderOrSolo() || now - lastSync < SYNC_INTERVAL_MS) return;
+            if (HypixelBridge.isKnown() && !HypixelBridge.isLeaderOrSolo()) {
+                // Only the party leader may advertise the party: leadership moved, so the listing goes away.
+                if (listing.id().equals(delistedFor)) return;
+                delistedFor = listing.id();
+                BackendConnection.delist();
+                PartyActions.chat(Component.translatable("partyfinder.chat.delisted_not_leader").withStyle(ChatFormatting.YELLOW));
+                return;
+            }
+            if (!HypixelBridge.isKnown() || now - lastSync < SYNC_INTERVAL_MS) return;
             Set<UUID> party = HypixelBridge.members();
             Set<UUID> listed = listing.members().stream().map(Listing.Member::uuid).collect(Collectors.toSet());
             if (!party.equals(listed)) {
@@ -75,6 +87,20 @@ public final class PartySync {
                 BackendEvents.onPartyFull(listing, canLaunch(listing));
             }
         }
+    }
+
+    /** A finder party that disappears (disbanded, delisted, left) is saved to the local history. */
+    private static void trackHistory(Minecraft mc) {
+        Listing current = currentListing().orElse(null);
+        String mode = HypixelBridge.mode();
+        // Leaving a dungeon or Kuudra instance ends a run even though the Hypixel party stays together.
+        boolean leftInstance = !mode.equals(lastMode) && (lastMode.equals("dungeon") || lastMode.equals("kuudra"));
+        lastMode = mode;
+        if (leftInstance && current != null && mc.player != null) PartyHistory.record(current, mc.player.getUUID());
+        if (lastSeen != null && (current == null || !current.id().equals(lastSeen.id())) && mc.player != null) {
+            PartyHistory.record(lastSeen, mc.player.getUUID());
+        }
+        lastSeen = current;
     }
 
     public static void onJoinAccepted(String listingId) {
@@ -130,6 +156,9 @@ public final class PartySync {
     }
 
     public static void reset() {
+        Minecraft mc = Minecraft.getInstance();
+        if (lastSeen != null && mc.player != null) PartyHistory.record(lastSeen, mc.player.getUUID());
+        lastSeen = null;
         joinedListingId = null;
         notifiedFull.clear();
         lastSync = 0;

@@ -1,10 +1,12 @@
 package fr.bloup.partyfinder.client.net;
 
 import fr.bloup.partyfinder.client.PartyActions;
+import fr.bloup.partyfinder.client.PartyfinderClient;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.activity.Activities;
+import fr.bloup.partyfinder.client.activity.StatFormat;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.ReportSummary;
@@ -17,6 +19,7 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class BackendEvents {
     private static final SystemToast.SystemToastId TOAST = new SystemToast.SystemToastId();
@@ -34,10 +37,13 @@ public final class BackendEvents {
         Minecraft mc = Minecraft.getInstance();
         SystemToast.addOrUpdate(mc.gui.toastManager(), TOAST,
                 Component.translatable("partyfinder.toast.join_request.title"),
-                Component.translatable("partyfinder.toast.join_request.body", from.name()));
+                Component.translatable("partyfinder.toast.join_request.keys", from.name(),
+                        PartyfinderClient.acceptKey.getTranslatedKeyMessage(), PartyfinderClient.denyKey.getTranslatedKeyMessage()));
         PartyActions.chat(Component.translatable("partyfinder.chat.join_request", from.name())
                 .append(" ")
                 .append(reportBadge(request.reports()))
+                .append(" ")
+                .append(statsLine(request))
                 .append(" ")
                 .append(chatButton("partyfinder.chat.accept", ChatFormatting.GREEN, "/partyfinder accept " + from.name()))
                 .append(" ")
@@ -88,9 +94,38 @@ public final class BackendEvents {
         PartyActions.chat(Component.translatable("partyfinder.info." + key, args.toArray()).withStyle(ChatFormatting.GREEN));
     }
 
-    public static void onError(String key) {
+    public static void onError(String key, List<String> args) {
         if (!key.matches(KEY_PATTERN)) return;
-        PartyActions.chat(Component.translatable("partyfinder.error." + key).withStyle(ChatFormatting.RED));
+        MutableComponent message = Component.translatable("partyfinder.error." + key).withStyle(ChatFormatting.RED);
+        String details = switch (key) {
+            case "requirements_not_met" -> args.stream().map(BackendEvents::requirementArg).filter(s -> !s.isEmpty())
+                    .collect(Collectors.joining(", "));
+            case "role_not_needed" -> args.stream().filter(Listing.CLASSES::contains)
+                    .map(c -> StatFormat.className(c).getString()).collect(Collectors.joining(", "));
+            default -> "";
+        };
+        if (!details.isEmpty()) message.append(Component.literal(" " + details).withStyle(ChatFormatting.GOLD));
+        PartyActions.chat(message);
+    }
+
+    /** Server sends requirements as "id:min". */
+    private static String requirementArg(String arg) {
+        int colon = arg.indexOf(':');
+        if (colon <= 0) return "";
+        try {
+            return StatFormat.requirement(arg.substring(0, colon), Integer.parseInt(arg.substring(colon + 1))).getString();
+        } catch (NumberFormatException e) {
+            return "";
+        }
+    }
+
+    /** Requester stats for the leader's activity, or a warning when the server could not verify them. */
+    public static MutableComponent statsLine(PartyFinderState.JoinRequest request) {
+        if (request.unverified()) return Component.translatable("partyfinder.requests.unverified").withStyle(ChatFormatting.YELLOW);
+        List<String> ids = PartyFinderState.ownListing().map(l -> Activities.get(l.activity()).stats()).orElse(List.of("sb"));
+        List<Component> parts = StatFormat.format(ids, request.stats());
+        return Component.literal(parts.stream().map(Component::getString).collect(Collectors.joining(" · ")))
+                .withStyle(ChatFormatting.AQUA);
     }
 
     private static MutableComponent reportBadge(ReportSummary reports) {
@@ -101,7 +136,7 @@ public final class BackendEvents {
             hover.append(lines.get(i));
         }
         ChatFormatting color = reports.count() > 0 ? ChatFormatting.RED : ChatFormatting.GREEN;
-        return Component.translatable("partyfinder.report.badge", reports.count())
+        return Component.literal(reports.badge())
                 .withStyle(style -> style.withColor(color).withHoverEvent(new HoverEvent.ShowText(hover)));
     }
 

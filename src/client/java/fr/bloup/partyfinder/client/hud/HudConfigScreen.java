@@ -41,7 +41,7 @@ public class HudConfigScreen extends OptionsSubScreen {
         list.addSmall(List.of(
                 Button.builder(Component.translatable(KEY + "edit_position"), b -> minecraft.gui.setScreen(new HudEditScreen(this)))
                         .width(OptionWidgets.WIDTH).build(),
-                W.choice("anchor", PartyFinderConfig.Anchor.values(), c.anchor, v -> c.anchor = v),
+                W.choice("side", PartyFinderConfig.Side.values(), c.side, v -> c.side = v),
                 W.choice("layout", PartyFinderConfig.Layout.values(), c.layout, v -> c.layout = v),
                 W.slider("scale", 50, 200, c.scale, "%", v -> c.scale = v),
                 W.slider("spacing", 0, 20, c.spacing, "px", v -> c.spacing = v),
@@ -67,7 +67,8 @@ public class HudConfigScreen extends OptionsSubScreen {
                 W.toggle("show_distance", c.showDistance, v -> c.showDistance = v),
                 W.toggle("show_stats", c.showStats, v -> c.showStats = v),
                 W.toggle("show_armor", c.showArmor, v -> c.showArmor = v),
-                W.toggle("show_held_item", c.showHeldItem, v -> c.showHeldItem = v)));
+                W.toggle("show_held_item", c.showHeldItem, v -> c.showHeldItem = v),
+                W.toggle("show_dungeon_class", c.showDungeonClass, v -> c.showDungeonClass = v)));
     }
 
     @Override
