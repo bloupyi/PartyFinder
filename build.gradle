@@ -12,20 +12,14 @@ repositories {
 		name = "Hypixel"
 		url = "https://repo.hypixel.net/repository/Hypixel/"
 	}
-	exclusiveContent {
-		forRepository {
-			maven {
-				name = "Modrinth"
-				url = "https://api.modrinth.com/maven"
-			}
-		}
-		filter {
-			includeGroup "maven.modrinth"
-		}
-	}
 }
 
 loom {
+	runs {
+		client {
+			vmArg "-Dpartyfinder.backend=ws://localhost:8765"
+		}
+	}
 	splitEnvironmentSourceSets()
 
 	mods {
@@ -48,7 +42,6 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	compileOnly "net.hypixel:mod-api:${project.hypixel_mod_api_version}"
-	localRuntime "maven.modrinth:hypixel-mod-api:${project.hypixel_mod_api_fabric_version}"
 }
 
 processResources {

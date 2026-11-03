@@ -8,11 +8,15 @@ import com.google.gson.JsonParser;
 import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.party.Listing;
+import fr.bloup.partyfinder.client.party.MemberStatus;
+import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.ReportSummary;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.User;
 
 import java.net.URI;
@@ -33,7 +37,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public final class BackendConnection {
-    private static final int PROTOCOL = 3;
+    private static final String BACKEND_URL = "wss://partyfinder.bloup.site";
+    private static final int PROTOCOL = 4;
     private static final int CLOSE_BANNED = 4004;
     private static final int CLOSE_OUTDATED = 4005;
     private static final int MAX_MESSAGE_CHARS = 4 * 1024 * 1024;
@@ -60,7 +65,20 @@ public final class BackendConnection {
         return PartyFinderState.status() == PartyFinderState.Status.ONLINE;
     }
 
+    /** Only Hypixel: the finder is meaningless elsewhere and must not be fed from fake servers. */
+    public static boolean isAllowedServer() {
+        if (FabricLoader.getInstance().isDevelopmentEnvironment()) return true;
+        ServerData server = Minecraft.getInstance().getCurrentServer();
+        if (server == null) return false;
+        String host = server.ip.toLowerCase(Locale.ROOT).strip();
+        int port = host.lastIndexOf(':');
+        if (port > 0 && host.indexOf(':') == port) host = host.substring(0, port);
+        if (host.endsWith(".")) host = host.substring(0, host.length() - 1);
+        return host.equals("hypixel.net") || host.endsWith(".hypixel.net");
+    }
+
     public static synchronized void connect() {
+        if (!isAllowedServer()) return;
         wanted = true;
         if (socket != null || PartyFinderState.status() == PartyFinderState.Status.CONNECTING) return;
         open(++generation);
@@ -108,22 +126,17 @@ public final class BackendConnection {
     }
 
     private static URI backendUri() {
-        String url = PartyFinderConfig.get().backendUrl;
-        URI uri;
+        // Players cannot redirect the mod; only a development run may point it at a local server.
+        String override = FabricLoader.getInstance().isDevelopmentEnvironment() ? System.getProperty("partyfinder.backend") : null;
+        if (override == null) return URI.create(BACKEND_URL);
         try {
-            uri = URI.create(url);
-        } catch (IllegalArgumentException e) {
-            Partyfinder.LOGGER.error("Invalid backend url {}", url);
-            return null;
+            URI uri = URI.create(override);
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            if ("wss".equals(uri.getScheme()) || host.equals("localhost") || host.equals("127.0.0.1")) return uri;
+        } catch (IllegalArgumentException ignored) {
         }
-        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
-        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
-        boolean local = host.equals("localhost") || host.equals("127.0.0.1") || host.equals("::1") || host.equals("[::1]");
-        if (scheme.equals("wss") || (scheme.equals("ws") && (local || PartyFinderConfig.get().allowInsecureBackend))) {
-            return uri;
-        }
-        Partyfinder.LOGGER.error("Refusing backend url {}: use wss:// (TLS) for remote servers", url);
-        return null;
+        Partyfinder.LOGGER.error("Ignoring invalid dev backend override {}", override);
+        return URI.create(BACKEND_URL);
     }
 
     private static synchronized void scheduleReconnect(long gen) {
@@ -174,6 +187,15 @@ public final class BackendConnection {
         JsonArray array = new JsonArray();
         members.forEach(uuid -> array.add(uuid.toString()));
         msg.add("members", array);
+        send(msg);
+    }
+
+    public static void memberStatus(Set<UUID> party, MemberStatus status) {
+        JsonObject msg = message("member_status");
+        JsonArray array = new JsonArray();
+        party.forEach(uuid -> array.add(uuid.toString()));
+        msg.add("party", array);
+        if (status != null) msg.add("status", GSON.toJsonTree(status));
         send(msg);
     }
 
@@ -356,6 +378,11 @@ public final class BackendConnection {
             case "kick_member" -> {
                 Listing.Player member = player(msg);
                 if (member != null) onClient(() -> PartySync.onKickMember(member.uuid(), member.name()));
+            }
+            case "member_status" -> {
+                UUID uuid = UUID.fromString(msg.get("uuid").getAsString());
+                MemberStatus status = MemberStatus.sanitize(GSON.fromJson(msg.get("status"), MemberStatus.class));
+                if (status != null) onClient(() -> PartyStatus.onRemote(uuid, status));
             }
             case "party_removed" -> {
                 String listingId = msg.get("listing").getAsString();

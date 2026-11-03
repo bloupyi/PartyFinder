@@ -21,6 +21,16 @@
     "report_limit": "#AAAAAA",
     "banned": "#AA0000",
     "leader": "#FFAA00",
-    "stat": "#55FFFF"
+    "stat": "#55FFFF",
+    "hud_name": "#FFFFFF",
+    "hud_self": "#55FFFF",
+    "hud_leader": "#FFAA00",
+    "hud_info": "#AAAAAA",
+    "hud_unknown": "#555555",
+    "hud_health_high": "#55FF55",
+    "hud_health_mid": "#FFFF55",
+    "hud_health_low": "#FF5555",
+    "hud_mana": "#5555FF",
+    "hud_bar_background": "#000000"
   }
 }

@@ -1,39 +1,45 @@
 package fr.bloup.partyfinder.client.hypixel;
 
-import net.hypixel.data.type.GameType;
-import net.hypixel.modapi.HypixelModAPI;
-import net.hypixel.modapi.packet.impl.clientbound.ClientboundPartyInfoPacket;
-import net.hypixel.modapi.packet.impl.clientbound.event.ClientboundLocationPacket;
-import net.hypixel.modapi.packet.impl.serverbound.ServerboundPartyInfoPacket;
+import fr.bloup.partyfinder.Partyfinder;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-import java.util.LinkedHashSet;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Real Hypixel party and location, from the Hypixel Mod API. Party info is pulled (not pushed), so it is
- * refreshed after party chat messages and periodically while the party finder needs it.
+ * Real Hypixel party and location (Hypixel Mod API protocol). Party info is pulled, not pushed, so it is refreshed
+ * after party chat messages and periodically while something needs it.
  */
 public final class HypixelBridge {
+    public enum Role { LEADER, MOD, MEMBER }
+
+    interface Transport {
+        void init();
+
+        void requestParty();
+    }
+
     private static final long MIN_REQUEST_INTERVAL_MS = 3_000;
     private static final long CHAT_REFRESH_DELAY_MS = 750;
     private static final long PERIODIC_REFRESH_MS = 30_000;
-
     private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
 
+    private static Transport transport;
     private static boolean known;
     private static boolean inParty;
-    private static UUID leader;
-    private static Set<UUID> members = Set.of();
+    private static Map<UUID, Role> members = Map.of();
     private static boolean onSkyBlock;
     private static String mode = "";
+    private static String map = "";
     private static long lastRequest;
     private static long refreshAt;
 
@@ -41,17 +47,16 @@ public final class HypixelBridge {
     }
 
     public static void init() {
-        HypixelModAPI api = HypixelModAPI.getInstance();
-        api.subscribeToEventPacket(ClientboundLocationPacket.class);
-        api.createHandler(ClientboundLocationPacket.class, packet -> Minecraft.getInstance().execute(() -> onLocation(packet)));
-        api.createHandler(ClientboundPartyInfoPacket.class, packet -> Minecraft.getInstance().execute(() -> onParty(packet)));
+        boolean official = FabricLoader.getInstance().isModLoaded("hypixel-mod-api");
+        transport = official ? new ModApiTransport() : new HypixelProtocol();
+        transport.init();
+        Partyfinder.LOGGER.info("Hypixel party data through {}", official ? "the Hypixel Mod API mod" : "the built-in protocol");
     }
 
     public static void addListener(Runnable listener) {
         LISTENERS.add(listener);
     }
 
-    /** True once the party state has been received at least once on this server. */
     public static boolean isKnown() {
         return known;
     }
@@ -61,35 +66,44 @@ public final class HypixelBridge {
     }
 
     public static Optional<UUID> leader() {
-        return Optional.ofNullable(leader);
+        return members.entrySet().stream().filter(e -> e.getValue() == Role.LEADER).map(Map.Entry::getKey).findFirst();
     }
 
-    /** Party members including the local player, or just the local player when not in a party. */
+    public static Role role(UUID uuid) {
+        return members.getOrDefault(uuid, Role.MEMBER);
+    }
+
+    /** Party members including the local player (leader first), or just the local player when not in a party. */
     public static Set<UUID> members() {
-        if (inParty && !members.isEmpty()) return members;
-        UUID self = Minecraft.getInstance().getUser().getProfileId();
-        return Set.of(self);
+        if (inParty && !members.isEmpty()) return members.keySet();
+        return Set.of(Minecraft.getInstance().getUser().getProfileId());
     }
 
     public static boolean isLeaderOrSolo() {
-        return !inParty || Minecraft.getInstance().getUser().getProfileId().equals(leader);
+        return !inParty || leader().map(Minecraft.getInstance().getUser().getProfileId()::equals).orElse(false);
     }
 
     public static boolean isOnSkyBlock() {
         return onSkyBlock;
     }
 
+    /** Hypixel island id, e.g. "hub", "dungeon", "mining_3". */
     public static String mode() {
         return mode;
+    }
+
+    /** Human readable map name, e.g. "Dwarven Mines". */
+    public static String map() {
+        return map;
     }
 
     public static void reset() {
         known = false;
         inParty = false;
-        leader = null;
-        members = Set.of();
+        members = Map.of();
         onSkyBlock = false;
         mode = "";
+        map = "";
         refreshAt = 0;
     }
 
@@ -104,29 +118,34 @@ public final class HypixelBridge {
     }
 
     public static void tick(boolean needsParty) {
-        if (Minecraft.getInstance().getConnection() == null) return;
+        if (transport == null || Minecraft.getInstance().getConnection() == null) return;
         long now = System.currentTimeMillis();
         if (needsParty && now - lastRequest >= PERIODIC_REFRESH_MS) requestRefresh(0);
         if (refreshAt != 0 && now >= refreshAt && now - lastRequest >= MIN_REQUEST_INTERVAL_MS) {
             refreshAt = 0;
             lastRequest = now;
-            HypixelModAPI.getInstance().sendPacket(new ServerboundPartyInfoPacket());
+            transport.requestParty();
         }
     }
 
-    private static void onParty(ClientboundPartyInfoPacket packet) {
-        boolean changed = !known || inParty != packet.isInParty()
-                || !packet.getMembers().equals(members) || !Objects.equals(packet.getLeader().orElse(null), leader);
+    static void onParty(boolean nowInParty, Map<UUID, Role> partyMembers) {
+        Map<UUID, Role> ordered = new LinkedHashMap<>();
+        partyMembers.forEach((uuid, role) -> {
+            if (role == Role.LEADER) ordered.put(uuid, role);
+        });
+        partyMembers.forEach(ordered::putIfAbsent);
+        Map<UUID, Role> next = nowInParty ? Map.copyOf(ordered) : Map.of();
+        boolean changed = !known || inParty != nowInParty || !next.equals(members);
         known = true;
-        inParty = packet.isInParty();
-        leader = packet.getLeader().orElse(null);
-        members = inParty ? new LinkedHashSet<>(packet.getMembers()) : Set.of();
+        inParty = nowInParty;
+        members = nowInParty ? Collections.unmodifiableMap(ordered) : Map.of();
         if (changed) LISTENERS.forEach(Runnable::run);
     }
 
-    private static void onLocation(ClientboundLocationPacket packet) {
-        onSkyBlock = packet.getServerType().map(type -> type == GameType.SKYBLOCK).orElse(false);
-        mode = packet.getMode().orElse("");
+    static void onLocation(String serverType, String newMode, String newMap) {
+        onSkyBlock = "SKYBLOCK".equals(serverType);
+        mode = newMode == null ? "" : newMode;
+        map = newMap == null ? "" : newMap;
         requestRefresh(0);
     }
 }

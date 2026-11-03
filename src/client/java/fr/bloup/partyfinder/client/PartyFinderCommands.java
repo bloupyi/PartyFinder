@@ -8,7 +8,10 @@ import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.gui.CreateListingScreen;
 import fr.bloup.partyfinder.client.gui.CategoryMenuScreen;
 import fr.bloup.partyfinder.client.gui.ModerationScreen;
+import fr.bloup.partyfinder.client.hud.HudConfigScreen;
+import fr.bloup.partyfinder.client.hud.HudEditScreen;
 import fr.bloup.partyfinder.client.gui.ReportScreen;
+import fr.bloup.partyfinder.client.gui.SettingsScreen;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
@@ -39,6 +42,17 @@ public final class PartyFinderCommands {
                     PartyActions.openNextTick(new CreateListingScreen(new CategoryMenuScreen(null)));
                     return 1;
                 }))
+                .then(literal("config").executes(ctx -> {
+                    PartyActions.openNextTick(new SettingsScreen(null));
+                    return 1;
+                }))
+                .then(literal("hud").executes(ctx -> {
+                    PartyActions.openNextTick(new HudConfigScreen(null));
+                    return 1;
+                }).then(literal("edit").executes(ctx -> {
+                    PartyActions.openNextTick(new HudEditScreen(null));
+                    return 1;
+                })))
                 .then(literal("go").executes(ctx -> {
                     if (!PartySync.launch()) {
                         ctx.getSource().sendError(Component.translatable("partyfinder.error.cannot_launch"));

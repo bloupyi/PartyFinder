@@ -29,6 +29,7 @@ public record Listing(
     private static final Pattern ID = Pattern.compile("[0-9a-f-]{1,36}");
     private static final Pattern ACTIVITY = Pattern.compile("[a-z0-9_]{1,32}");
     private static final Pattern NAME = Pattern.compile("[A-Za-z0-9_]{1,16}");
+    private static final Pattern FORMATTING = Pattern.compile("§.", Pattern.DOTALL);
     private static final Pattern UNSAFE_CHARS = Pattern.compile("[\\p{Cc}\\p{Cf}§]");
 
     public record Player(UUID uuid, String name) {
@@ -59,7 +60,7 @@ public record Listing(
 
     public static String cleanText(String text, int maxLength) {
         if (text == null) return "";
-        String cleaned = UNSAFE_CHARS.matcher(text).replaceAll("").strip();
+        String cleaned = UNSAFE_CHARS.matcher(FORMATTING.matcher(text).replaceAll("")).replaceAll("").strip();
         return cleaned.length() > maxLength ? cleaned.substring(0, maxLength) : cleaned;
     }
 

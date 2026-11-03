@@ -72,6 +72,7 @@ public final class BackendEvents {
     }
 
     public static void onPartyFull(Listing listing, boolean canLaunch) {
+        if (!PartyFinderConfig.get().notifyPartyFull) return;
         Minecraft mc = Minecraft.getInstance();
         Component title = Activities.get(listing.activity()).title(listing.options());
         SystemToast.addOrUpdate(mc.gui.toastManager(), TOAST,

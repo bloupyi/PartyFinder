@@ -8,6 +8,8 @@ public final class PfSprites {
     public static final Identifier ENTRY = id("listing/entry");
     public static final Identifier ENTRY_HIGHLIGHTED = id("listing/entry_highlighted");
     public static final Identifier ENTRY_OWN = id("listing/entry_own");
+    public static final Identifier HUD_FRAME = id("hud/frame");
+    public static final Identifier HUD_FRAME_SELF = id("hud/frame_self");
 
     private PfSprites() {
     }

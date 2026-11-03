@@ -73,6 +73,16 @@
       "slot": 33,
       "action": "launch",
       "icon": "minecraft:ender_eye"
+    },
+    {
+      "slot": 34,
+      "action": "hud",
+      "icon": "minecraft:painting"
+    },
+    {
+      "slot": 28,
+      "action": "settings",
+      "icon": "minecraft:repeater"
     }
   ]
 }

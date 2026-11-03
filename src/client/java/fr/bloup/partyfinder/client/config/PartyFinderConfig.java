@@ -17,12 +17,65 @@ public class PartyFinderConfig {
 
     private static PartyFinderConfig instance = new PartyFinderConfig();
 
-    public String backendUrl = "ws://localhost:8765";
-    public boolean allowInsecureBackend = false;
-    public boolean hypixelOnly = true;
     public boolean showMenuButton = true;
     public boolean autoAcceptInvites = true;
     public boolean notifyJoinRequests = true;
+    public boolean notifyPartyFull = true;
+    public Hud hud = new Hud();
+
+    public enum Anchor { TOP_LEFT, TOP_RIGHT, CENTER_LEFT, CENTER_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
+
+    public enum Layout { VERTICAL, HORIZONTAL }
+
+    public enum Portrait { HEAD, MODEL, NONE }
+
+    public enum HealthText { NUMBERS, PERCENT, NONE }
+
+    public static class Hud {
+        public boolean enabled = true;
+        public boolean onlyOnSkyBlock = true;
+        public boolean showSelf = true;
+        public boolean hideWhenSolo = true;
+        public Anchor anchor = Anchor.TOP_LEFT;
+        public int offsetX = 4;
+        public int offsetY = 4;
+        public Layout layout = Layout.VERTICAL;
+        public int spacing = 2;
+        public int scale = 100;
+        public int maxMembers = 8;
+        public boolean compact = false;
+        public Portrait portrait = Portrait.HEAD;
+        public int modelRotation = 25;
+        public boolean showName = true;
+        public boolean showLeader = true;
+        public boolean showHealthBar = true;
+        public HealthText healthText = HealthText.NUMBERS;
+        public boolean showManaBar = true;
+        public boolean showDefense = false;
+        public boolean showLocation = true;
+        public boolean showDistance = true;
+        public boolean showStats = true;
+        public boolean showHeldItem = false;
+        public boolean showArmor = false;
+        public boolean shareStatus = true;
+        public int backgroundOpacity = 70;
+        public boolean textShadow = true;
+        public int localRange = 48;
+
+        void sanitize() {
+            Hud defaults = new Hud();
+            if (anchor == null) anchor = defaults.anchor;
+            if (layout == null) layout = defaults.layout;
+            if (portrait == null) portrait = defaults.portrait;
+            if (healthText == null) healthText = defaults.healthText;
+            scale = Math.clamp(scale, 50, 200);
+            maxMembers = Math.clamp(maxMembers, 1, 20);
+            spacing = Math.clamp(spacing, 0, 20);
+            backgroundOpacity = Math.clamp(backgroundOpacity, 0, 100);
+            localRange = Math.clamp(localRange, 0, 128);
+            modelRotation = Math.clamp(modelRotation, -90, 90);
+        }
+    }
 
     public static PartyFinderConfig get() {
         return instance;
@@ -33,6 +86,8 @@ public class PartyFinderConfig {
             try (Reader reader = Files.newBufferedReader(PATH)) {
                 PartyFinderConfig loaded = GSON.fromJson(reader, PartyFinderConfig.class);
                 if (loaded != null) instance = loaded;
+                if (instance.hud == null) instance.hud = new Hud();
+                instance.hud.sanitize();
             } catch (Exception e) {
                 Partyfinder.LOGGER.error("Failed to read {}", PATH, e);
             }

@@ -2,6 +2,7 @@ package fr.bloup.partyfinder.client.gui;
 
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.MenuLayout;
+import fr.bloup.partyfinder.client.hud.HudConfigScreen;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.Moderation;
@@ -109,6 +110,8 @@ public class CategoryMenuScreen extends Screen {
             case REQUESTS -> minecraft.gui.setScreen(new JoinRequestsScreen(this));
             case MODERATION -> minecraft.gui.setScreen(new ModerationScreen(this));
             case RECONNECT -> BackendConnection.reconnect();
+            case HUD -> minecraft.gui.setScreen(new HudConfigScreen(this));
+            case SETTINGS -> minecraft.gui.setScreen(new SettingsScreen(this));
             case LAUNCH -> {
                 if (PartySync.launch()) onClose();
             }
@@ -161,6 +164,14 @@ public class CategoryMenuScreen extends Screen {
                 lines.add(Component.translatable("partyfinder.status." + status.name().toLowerCase(Locale.ROOT)).withColor(statusColor(status)));
                 lines.add(Component.empty());
                 lines.add(PartyFinderState.selfReports().describe().getFirst());
+            }
+            case SETTINGS -> {
+                lines.add(Component.translatable("partyfinder.settings.title").withStyle(ChatFormatting.GREEN));
+                lines.add(Component.translatable("partyfinder.menu.settings.desc").withStyle(ChatFormatting.GRAY));
+            }
+            case HUD -> {
+                lines.add(Component.translatable("partyfinder.hud.title").withStyle(ChatFormatting.GREEN));
+                lines.add(Component.translatable("partyfinder.menu.hud.desc").withStyle(ChatFormatting.GRAY));
             }
             case LAUNCH -> {
                 lines.add(Component.translatable("partyfinder.menu.launch").withStyle(ChatFormatting.GREEN));
