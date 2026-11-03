@@ -12,11 +12,30 @@ repositories {
 		name = "Hypixel"
 		url = "https://repo.hypixel.net/repository/Hypixel/"
 	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter {
+			includeGroup "maven.modrinth"
+		}
+	}
 }
 
 loom {
 	runs {
+		// Real Microsoft account (DevAuth Neo, dev only) against the production server: test on Hypixel.
 		client {
+			vmArg "-Ddevauth.enabled=1"
+		}
+		// Offline dev account against a local backend (npm run dev in backend/).
+		clientLocal {
+			client()
+			name "Minecraft Client (local backend)"
+			vmArg "-Ddevauth.enabled=0"
 			vmArg "-Dpartyfinder.backend=ws://localhost:8765"
 		}
 	}
@@ -42,6 +61,7 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	compileOnly "net.hypixel:mod-api:${project.hypixel_mod_api_version}"
+	localRuntime "maven.modrinth:dev-auth-neo:${project.dev_auth_neo_version}"
 }
 
 processResources {

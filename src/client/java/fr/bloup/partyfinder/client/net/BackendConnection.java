@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import fr.bloup.partyfinder.Partyfinder;
+import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.Listing;
@@ -17,7 +18,9 @@ import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.ReportSummary;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.User;
 
@@ -161,7 +164,25 @@ public final class BackendConnection {
         sendChain = sendChain.handle((r, e) -> null).thenCompose(v -> ws.sendText(text, true));
     }
 
+    private static long publishSentAt;
+
+    /** Publishing gets a visible answer: the listing, a refusal, or this timeout message. */
+    public static void checkPublishTimeout() {
+        if (publishSentAt == 0 || System.currentTimeMillis() - publishSentAt < 8_000) return;
+        publishSentAt = 0;
+        PartyActions.chat(Component.translatable("partyfinder.error.no_response").withStyle(ChatFormatting.RED));
+    }
+
+    public static void publishAnswered() {
+        publishSentAt = 0;
+    }
+
     public static void publish(ListingDraft draft) {
+        if (!isConnected()) {
+            PartyActions.chat(Component.translatable("partyfinder.screen.offline").withStyle(ChatFormatting.RED));
+            return;
+        }
+        publishSentAt = System.currentTimeMillis();
         publish(draft.activity(), draft.options(), draft.note(), draft.requirements(), draft.maxSize(), draft.maxReports(),
                 draft.minStats(), draft.roles());
     }
@@ -378,7 +399,14 @@ public final class BackendConnection {
             }
             case "upsert" -> {
                 Listing listing = listing(msg.get("listing"));
-                if (listing != null) onClient(() -> PartyFinderState.upsert(listing));
+                if (listing == null) {
+                    Partyfinder.LOGGER.warn("Dropped invalid listing from backend: {}", msg.get("listing"));
+                } else {
+                    onClient(() -> {
+                        if (PartyFinderState.isSelf(listing.owner())) publishAnswered();
+                        PartyFinderState.upsert(listing);
+                    });
+                }
             }
             case "remove" -> {
                 String id = msg.get("id").getAsString();
@@ -428,7 +456,10 @@ public final class BackendConnection {
                         if (args.size() < 8) args.add(Listing.cleanText(arg.getAsString(), 32));
                     }
                 }
-                onClient(() -> BackendEvents.onError(key, args));
+                onClient(() -> {
+                    publishAnswered();
+                    BackendEvents.onError(key, args);
+                });
             }
             default -> Partyfinder.LOGGER.debug("Unknown backend message {}", type);
         }
@@ -478,6 +509,7 @@ public final class BackendConnection {
         try {
             return Listing.sanitize(GSON.fromJson(json, Listing.class));
         } catch (RuntimeException e) {
+            Partyfinder.LOGGER.warn("Cannot read listing: {}", e.toString());
             return null;
         }
     }

@@ -304,8 +304,6 @@
   "partyfinder.settings.option.notify_party_full.tooltip": "Toast et bouton Lancer quand ta party du finder est complète.",
   "partyfinder.settings.option.share_status": "Partager mon statut",
   "partyfinder.settings.option.share_status.tooltip": "Envoie ta vie, ta mana, ton île et ton équipement aux membres de ta party (uniquement les joueurs dans ta party Hypixel, et réciproquement).",
-  "partyfinder.settings.option.show_menu_button": "Bouton dans les menus",
-  "partyfinder.settings.option.show_menu_button.tooltip": "Affiche le bouton PartyFinder à côté des menus de coffre.",
   "partyfinder.settings.option.party_hud": "HUD de party...",
   "partyfinder.settings.option.party_hud.tooltip": "",
   "partyfinder.hud.option.side": "Côté",
@@ -454,5 +452,9 @@
   "key.partyfinder.deny": "Refuser la demande de join",
   "partyfinder.toast.join_request.keys": "%s veut rejoindre · [%s] accepter · [%s] refuser",
   "partyfinder.chat.request_accepted": "Demande de %s acceptée.",
-  "partyfinder.chat.request_denied": "Demande de %s refusée."
+  "partyfinder.chat.request_denied": "Demande de %s refusée.",
+  "partyfinder.chat.published": "Annonce publiée : %s",
+  "partyfinder.error.no_response": "Le serveur PartyFinder n'a pas répondu. Réessaie ou reconnecte-toi.",
+  "partyfinder.command.sounds.on": "Sons du serveur affichés dans le chat (clic pour copier). Refais /pf sounds pour arrêter.",
+  "partyfinder.command.sounds.off": "Affichage des sons arrêté."
 }

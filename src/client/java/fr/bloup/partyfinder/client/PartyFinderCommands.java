@@ -55,6 +55,10 @@ public final class PartyFinderCommands {
                     PartyActions.openNextTick(new CreateListingScreen(new CategoryMenuScreen(null)));
                     return 1;
                 }))
+                .then(literal("sounds").executes(ctx -> {
+                    ctx.getSource().sendFeedback(Component.translatable(SoundDebug.toggle() ? "partyfinder.command.sounds.on" : "partyfinder.command.sounds.off"));
+                    return 1;
+                }))
                 .then(literal("config").executes(ctx -> {
                     PartyActions.openNextTick(new SettingsScreen(null));
                     return 1;

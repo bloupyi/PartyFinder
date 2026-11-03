@@ -54,8 +54,9 @@ public final class PartyActions {
     }
 
     public static void chat(Component message) {
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) player.sendSystemMessage(PREFIX.copy().append(message));
+        Minecraft mc = Minecraft.getInstance();
+        // LocalPlayer.sendSystemMessage targets the action bar in 26.x, which Hypixel overwrites constantly.
+        if (mc.player != null) mc.gui.chatListener().handleSystemMessage(PREFIX.copy().append(message), false);
     }
 
     public static void command(String command) {

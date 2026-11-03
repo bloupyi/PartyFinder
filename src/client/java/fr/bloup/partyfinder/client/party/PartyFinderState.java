@@ -1,6 +1,10 @@
 package fr.bloup.partyfinder.client.party;
 
 import com.google.gson.JsonObject;
+import fr.bloup.partyfinder.client.PartyActions;
+import fr.bloup.partyfinder.client.activity.Activities;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -84,7 +88,11 @@ public final class PartyFinderState {
     }
 
     public static void upsert(Listing listing) {
-        LISTINGS.put(listing.id(), listing);
+        Listing previous = LISTINGS.put(listing.id(), listing);
+        if (previous == null && isSelf(listing.owner())) {
+            PartyActions.chat(Component.translatable("partyfinder.chat.published", Activities.get(listing.activity()).title(listing.options()))
+                    .withStyle(ChatFormatting.GREEN));
+        }
         changed();
     }
 

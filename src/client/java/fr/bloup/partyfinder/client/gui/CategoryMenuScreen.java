@@ -13,6 +13,8 @@ import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -43,6 +45,7 @@ public class CategoryMenuScreen extends Screen {
     private int panelTop;
     private Button launchButton;
     private Button leaveButton;
+    private boolean soundPlayed;
 
     public CategoryMenuScreen(Screen parent) {
         super(Component.translatable("partyfinder.screen.title"));
@@ -55,6 +58,11 @@ public class CategoryMenuScreen extends Screen {
         layout = MenuLayout.load();
         BackendConnection.connect();
         if (PartyFinderState.isOp()) BackendConnection.opReports();
+        if (!soundPlayed && layout.openSound() != null) {
+            soundPlayed = true;
+            MenuLayout.Sound sound = layout.openSound();
+            minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvent.createVariableRangeEvent(sound.id()), sound.pitch(), sound.volume()));
+        }
         imageHeight = layout.rows() * 18 + 24;
         left = (width - IMAGE_WIDTH) / 2;
         top = Math.max(4, (height - imageHeight - PANEL_GAP - PANEL_HEIGHT) / 2);

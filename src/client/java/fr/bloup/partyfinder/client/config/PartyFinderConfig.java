@@ -19,7 +19,6 @@ public class PartyFinderConfig {
 
     private static PartyFinderConfig instance = new PartyFinderConfig();
 
-    public boolean showMenuButton = true;
     public boolean autoAcceptInvites = true;
     public boolean notifyJoinRequests = true;
     public boolean notifyPartyFull = true;

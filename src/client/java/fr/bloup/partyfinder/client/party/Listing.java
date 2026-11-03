@@ -1,6 +1,8 @@
 package fr.bloup.partyfinder.client.party;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -41,7 +43,11 @@ public record Listing(
     }
 
     /** A member of the host's real Hypixel party; stats is the backend's compact SkyBlock summary (may be null). */
-    public record Member(UUID uuid, String name, JsonObject stats, boolean finder) {
+    public record Member(UUID uuid, String name, @SerializedName("stats") JsonElement rawStats, boolean finder) {
+        /** The backend sends null while stats are loading; Gson cannot read null into a JsonObject field. */
+        public JsonObject stats() {
+            return rawStats != null && rawStats.isJsonObject() ? rawStats.getAsJsonObject() : null;
+        }
     }
 
     public boolean isFull() {

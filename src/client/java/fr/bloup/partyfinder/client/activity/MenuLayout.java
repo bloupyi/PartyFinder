@@ -17,7 +17,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Slot> slots) {
+public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Slot> slots, Sound openSound) {
+    /** Sound played when the menu opens ("open_sound" in menu.json); null for none. */
+    public record Sound(Identifier id, float volume, float pitch) {
+    }
+
     private static final Identifier FILE = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/menu.json");
     private static final Identifier DEFAULT_TEXTURE = Identifier.withDefaultNamespace("textures/gui/container/generic_54.png");
 
@@ -35,7 +39,7 @@ public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Sl
                 Partyfinder.LOGGER.error("Failed to load {}", FILE, e);
             }
         }
-        return new MenuLayout(DEFAULT_TEXTURE, 4, ItemStack.EMPTY, List.of());
+        return new MenuLayout(DEFAULT_TEXTURE, 4, ItemStack.EMPTY, List.of(), null);
     }
 
     private static MenuLayout parse(JsonObject json) {
@@ -52,7 +56,15 @@ public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Sl
             ItemStack icon = slot.has("icon") ? item(slot.get("icon").getAsString()) : new ItemStack(Items.PAPER);
             slots.add(new Slot(index, action, category, icon));
         }
-        return new MenuLayout(texture, rows, filler, List.copyOf(slots));
+        Sound sound = null;
+        if (json.has("open_sound") && json.get("open_sound").isJsonObject()) {
+            JsonObject s = json.getAsJsonObject("open_sound");
+            Identifier id = Identifier.tryParse(s.get("id").getAsString());
+            float volume = s.has("volume") ? s.get("volume").getAsFloat() : 1f;
+            float pitch = s.has("pitch") ? s.get("pitch").getAsFloat() : 1f;
+            if (id != null) sound = new Sound(id, volume, pitch);
+        }
+        return new MenuLayout(texture, rows, filler, List.copyOf(slots), sound);
     }
 
     private static ItemStack item(String id) {

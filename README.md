@@ -13,9 +13,8 @@ Client-side Fabric mod (Minecraft 26.2) adding a party finder for Hypixel SkyBlo
 - `/pf config` opens the settings, `/pf hud` configures the party HUD, `/pf hud edit` moves it
 
 Party data comes from Hypixel's Mod API protocol, built in (the official Hypixel Mod API mod is used instead when installed). No extra mod required.
-- A button next to every container menu opens it too
 
-Settings: `/pf config` (or `config/partyfinder.json`: `showMenuButton`, `autoAcceptInvites`, `notifyJoinRequests`, `notifyPartyFull`, `hud`). The mod only talks to its server while connected to Hypixel, and the server address is fixed.
+Settings: `/pf config` (or `config/partyfinder.json`: `autoAcceptInvites`, `notifyJoinRequests`, `notifyPartyFull`, `hud`). The mod only talks to its server while connected to Hypixel, and the server address is fixed.
 
 ## Listings
 
