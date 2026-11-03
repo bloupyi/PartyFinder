@@ -17,13 +17,16 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 public final class Activities {
     private static final Identifier ACTIVITIES = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/activities.json");
     private static final Identifier THEME = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/theme.json");
 
+    private static final Pattern SAFE_COMMAND = Pattern.compile("[A-Za-z0-9_ ]{1,64}");
     private static final Map<String, Activity> BY_ID = new LinkedHashMap<>();
     private static final List<String> CATEGORIES = new ArrayList<>();
     private static final Map<String, Integer> COLORS = new LinkedHashMap<>();
@@ -58,7 +61,7 @@ public final class Activities {
     public static Activity get(String id) {
         Activity activity = BY_ID.get(id);
         if (activity != null) return activity;
-        return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5);
+        return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5, List.of(), Activity.Launch.NONE, List.of("sb"));
     }
 
     public static int color(String key, int fallback) {
@@ -87,7 +90,37 @@ public final class Activities {
         Identifier sprite = json.has("sprite") ? Identifier.parse(json.get("sprite").getAsString()) : null;
         int color = json.has("color") ? parseColor(json.get("color").getAsString(), 0xFFFFFF) : 0xFFFFFF;
         int maxSize = json.has("max_size") ? json.get("max_size").getAsInt() : 5;
-        return new Activity(id, category, icon, sprite, color, Math.max(2, maxSize));
+        List<Activity.Option> options = new ArrayList<>();
+        if (json.has("options")) {
+            for (JsonElement element : json.getAsJsonArray("options")) {
+                JsonObject option = element.getAsJsonObject();
+                List<Activity.Value> values = new ArrayList<>();
+                for (JsonElement v : option.getAsJsonArray("values")) {
+                    JsonObject value = v.getAsJsonObject();
+                    List<String> commands = new ArrayList<>();
+                    if (value.has("commands")) {
+                        for (JsonElement c : value.getAsJsonArray("commands")) {
+                            String command = c.getAsString().strip();
+                            if (command.startsWith("/")) command = command.substring(1);
+                            if (SAFE_COMMAND.matcher(command).matches()) commands.add(command);
+                            else Partyfinder.LOGGER.warn("Ignoring unsafe launch command \"{}\" in {}", command, id);
+                        }
+                    }
+                    values.add(new Activity.Value(value.get("id").getAsString(), List.copyOf(commands)));
+                }
+                if (!values.isEmpty()) options.add(new Activity.Option(option.get("id").getAsString(), List.copyOf(values)));
+            }
+        }
+        Activity.Launch launch = Activity.Launch.NONE;
+        if (json.has("launch")) {
+            try {
+                launch = Activity.Launch.valueOf(json.get("launch").getAsString().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        List<String> stats = new ArrayList<>();
+        if (json.has("stats")) json.getAsJsonArray("stats").forEach(e -> stats.add(e.getAsString()));
+        return new Activity(id, category, icon, sprite, color, Math.max(2, maxSize), List.copyOf(options), launch, List.copyOf(stats));
     }
 
     private static int parseColor(String value, int fallback) {

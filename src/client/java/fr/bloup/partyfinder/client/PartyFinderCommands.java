@@ -11,6 +11,7 @@ import fr.bloup.partyfinder.client.gui.ModerationScreen;
 import fr.bloup.partyfinder.client.gui.ReportScreen;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.PartySync;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.network.chat.Component;
 
@@ -36,6 +37,20 @@ public final class PartyFinderCommands {
                     Activities.reload();
                     BackendConnection.connect();
                     PartyActions.openNextTick(new CreateListingScreen(new CategoryMenuScreen(null)));
+                    return 1;
+                }))
+                .then(literal("go").executes(ctx -> {
+                    if (!PartySync.launch()) {
+                        ctx.getSource().sendError(Component.translatable("partyfinder.error.cannot_launch"));
+                        return 0;
+                    }
+                    return 1;
+                }))
+                .then(literal("leave").executes(ctx -> {
+                    if (!PartySync.leave()) {
+                        ctx.getSource().sendError(Component.translatable("partyfinder.error.not_in_finder_party"));
+                        return 0;
+                    }
                     return 1;
                 }))
                 .then(literal("delist").executes(ctx -> {

@@ -1,26 +1,641 @@
 {
   "activities": [
-    { "id": "mineshaft", "category": "mining", "icon": "minecraft:packed_ice", "color": "#55FFFF", "max_size": 4 },
-    { "id": "crystal_hollows", "category": "mining", "icon": "minecraft:amethyst_shard", "color": "#FF55FF", "max_size": 5 },
-    { "id": "mining_event", "category": "mining", "icon": "minecraft:iron_pickaxe", "color": "#AAAAAA", "max_size": 5 },
-
-    { "id": "sea_creatures", "category": "fishing", "icon": "minecraft:fishing_rod", "color": "#5555FF", "max_size": 5 },
-    { "id": "lava_fishing", "category": "fishing", "icon": "minecraft:magma_cream", "color": "#FFAA00", "max_size": 5 },
-    { "id": "trophy_fishing", "category": "fishing", "icon": "minecraft:tropical_fish", "color": "#FFFF55", "max_size": 5 },
-    { "id": "jerry_workshop", "category": "fishing", "icon": "minecraft:snowball", "color": "#FFFFFF", "max_size": 5 },
-
-    { "id": "revenant", "category": "slayer", "icon": "minecraft:rotten_flesh", "color": "#00AA00", "max_size": 5 },
-    { "id": "tarantula", "category": "slayer", "icon": "minecraft:spider_eye", "color": "#AA0000", "max_size": 5 },
-    { "id": "sven", "category": "slayer", "icon": "minecraft:bone", "color": "#FFFFFF", "max_size": 5 },
-    { "id": "voidgloom", "category": "slayer", "icon": "minecraft:ender_pearl", "color": "#AA00AA", "max_size": 5 },
-    { "id": "inferno", "category": "slayer", "icon": "minecraft:blaze_powder", "color": "#FF5555", "max_size": 5 },
-    { "id": "riftstalker", "category": "slayer", "icon": "minecraft:red_dye", "color": "#FF55FF", "max_size": 5 },
-
-    { "id": "dungeons_floor", "category": "dungeons", "icon": "minecraft:skeleton_skull", "color": "#FF5555", "max_size": 5 },
-    { "id": "dungeons_master", "category": "dungeons", "icon": "minecraft:wither_skeleton_skull", "color": "#AA0000", "max_size": 5 },
-    { "id": "kuudra", "category": "kuudra", "icon": "minecraft:magma_block", "color": "#FFAA00", "max_size": 4 },
-
-    { "id": "diana", "category": "misc", "icon": "minecraft:golden_shovel", "color": "#FFAA00", "max_size": 5 },
-    { "id": "other", "category": "misc", "icon": "minecraft:name_tag", "color": "#FFFFFF", "max_size": 10 }
+    {
+      "id": "mineshaft",
+      "category": "mining",
+      "icon": "minecraft:packed_ice",
+      "color": "#55FFFF",
+      "max_size": 4,
+      "launch": "all",
+      "options": [
+        {
+          "id": "mining_area",
+          "values": [
+            {
+              "id": "glacite",
+              "commands": [
+                "warp camp"
+              ]
+            },
+            {
+              "id": "dwarven",
+              "commands": [
+                "warp mines"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_mining",
+        "hotm"
+      ]
+    },
+    {
+      "id": "crystal_hollows",
+      "category": "mining",
+      "icon": "minecraft:amethyst_shard",
+      "color": "#FF55FF",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "mining_area",
+          "values": [
+            {
+              "id": "crystal_hollows",
+              "commands": [
+                "warp ch"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_mining",
+        "hotm"
+      ]
+    },
+    {
+      "id": "mining_event",
+      "category": "mining",
+      "icon": "minecraft:iron_pickaxe",
+      "color": "#AAAAAA",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "mining_area",
+          "values": [
+            {
+              "id": "dwarven",
+              "commands": [
+                "warp mines"
+              ]
+            },
+            {
+              "id": "glacite",
+              "commands": [
+                "warp camp"
+              ]
+            },
+            {
+              "id": "crystal_hollows",
+              "commands": [
+                "warp ch"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_mining",
+        "hotm"
+      ]
+    },
+    {
+      "id": "sea_creatures",
+      "category": "fishing",
+      "icon": "minecraft:fishing_rod",
+      "color": "#5555FF",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "island",
+          "values": [
+            {
+              "id": "hub",
+              "commands": [
+                "warp hub"
+              ]
+            },
+            {
+              "id": "crimson",
+              "commands": [
+                "warp crimson"
+              ]
+            },
+            {
+              "id": "bayou",
+              "commands": [
+                "warp bayou"
+              ]
+            },
+            {
+              "id": "jerry",
+              "commands": [
+                "warp jerry"
+              ]
+            },
+            {
+              "id": "crystal_hollows",
+              "commands": [
+                "warp ch"
+              ]
+            },
+            {
+              "id": "park",
+              "commands": [
+                "warp park"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_fishing",
+        "sb"
+      ]
+    },
+    {
+      "id": "lava_fishing",
+      "category": "fishing",
+      "icon": "minecraft:magma_cream",
+      "color": "#FFAA00",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "island",
+          "values": [
+            {
+              "id": "crimson",
+              "commands": [
+                "warp crimson"
+              ]
+            },
+            {
+              "id": "crystal_hollows",
+              "commands": [
+                "warp ch"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_fishing",
+        "sb"
+      ]
+    },
+    {
+      "id": "trophy_fishing",
+      "category": "fishing",
+      "icon": "minecraft:tropical_fish",
+      "color": "#FFFF55",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "island",
+          "values": [
+            {
+              "id": "crimson",
+              "commands": [
+                "warp crimson"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_fishing",
+        "sb"
+      ]
+    },
+    {
+      "id": "jerry_workshop",
+      "category": "fishing",
+      "icon": "minecraft:snowball",
+      "color": "#FFFFFF",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "island",
+          "values": [
+            {
+              "id": "jerry",
+              "commands": [
+                "warp jerry"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "skill_fishing",
+        "sb"
+      ]
+    },
+    {
+      "id": "revenant",
+      "category": "slayer",
+      "icon": "minecraft:rotten_flesh",
+      "color": "#00AA00",
+      "max_size": 5,
+      "launch": "none",
+      "options": [
+        {
+          "id": "tier",
+          "values": [
+            {
+              "id": "t1"
+            },
+            {
+              "id": "t2"
+            },
+            {
+              "id": "t3"
+            },
+            {
+              "id": "t4"
+            },
+            {
+              "id": "t5"
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "slayer_zombie",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "tarantula",
+      "category": "slayer",
+      "icon": "minecraft:spider_eye",
+      "color": "#AA0000",
+      "max_size": 5,
+      "launch": "none",
+      "options": [
+        {
+          "id": "tier",
+          "values": [
+            {
+              "id": "t1"
+            },
+            {
+              "id": "t2"
+            },
+            {
+              "id": "t3"
+            },
+            {
+              "id": "t4"
+            },
+            {
+              "id": "t5"
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "slayer_spider",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "sven",
+      "category": "slayer",
+      "icon": "minecraft:bone",
+      "color": "#FFFFFF",
+      "max_size": 5,
+      "launch": "none",
+      "options": [
+        {
+          "id": "tier",
+          "values": [
+            {
+              "id": "t1"
+            },
+            {
+              "id": "t2"
+            },
+            {
+              "id": "t3"
+            },
+            {
+              "id": "t4"
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "slayer_wolf",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "voidgloom",
+      "category": "slayer",
+      "icon": "minecraft:ender_pearl",
+      "color": "#AA00AA",
+      "max_size": 5,
+      "launch": "none",
+      "options": [
+        {
+          "id": "tier",
+          "values": [
+            {
+              "id": "t1"
+            },
+            {
+              "id": "t2"
+            },
+            {
+              "id": "t3"
+            },
+            {
+              "id": "t4"
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "slayer_enderman",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "inferno",
+      "category": "slayer",
+      "icon": "minecraft:blaze_powder",
+      "color": "#FF5555",
+      "max_size": 5,
+      "launch": "none",
+      "options": [
+        {
+          "id": "tier",
+          "values": [
+            {
+              "id": "t1"
+            },
+            {
+              "id": "t2"
+            },
+            {
+              "id": "t3"
+            },
+            {
+              "id": "t4"
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "slayer_blaze",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "riftstalker",
+      "category": "slayer",
+      "icon": "minecraft:red_dye",
+      "color": "#FF55FF",
+      "max_size": 5,
+      "launch": "none",
+      "options": [
+        {
+          "id": "tier",
+          "values": [
+            {
+              "id": "t1"
+            },
+            {
+              "id": "t2"
+            },
+            {
+              "id": "t3"
+            },
+            {
+              "id": "t4"
+            },
+            {
+              "id": "t5"
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "slayer_vampire",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "dungeons_floor",
+      "category": "dungeons",
+      "icon": "minecraft:skeleton_skull",
+      "color": "#FF5555",
+      "max_size": 5,
+      "launch": "host",
+      "options": [
+        {
+          "id": "floor",
+          "values": [
+            {
+              "id": "e",
+              "commands": [
+                "joininstance CATACOMBS_ENTRANCE"
+              ]
+            },
+            {
+              "id": "f1",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_ONE"
+              ]
+            },
+            {
+              "id": "f2",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_TWO"
+              ]
+            },
+            {
+              "id": "f3",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_THREE"
+              ]
+            },
+            {
+              "id": "f4",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_FOUR"
+              ]
+            },
+            {
+              "id": "f5",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_FIVE"
+              ]
+            },
+            {
+              "id": "f6",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_SIX"
+              ]
+            },
+            {
+              "id": "f7",
+              "commands": [
+                "joininstance CATACOMBS_FLOOR_SEVEN"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "class",
+        "cata"
+      ]
+    },
+    {
+      "id": "dungeons_master",
+      "category": "dungeons",
+      "icon": "minecraft:wither_skeleton_skull",
+      "color": "#AA0000",
+      "max_size": 5,
+      "launch": "host",
+      "options": [
+        {
+          "id": "floor",
+          "values": [
+            {
+              "id": "m1",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_ONE"
+              ]
+            },
+            {
+              "id": "m2",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_TWO"
+              ]
+            },
+            {
+              "id": "m3",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_THREE"
+              ]
+            },
+            {
+              "id": "m4",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_FOUR"
+              ]
+            },
+            {
+              "id": "m5",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_FIVE"
+              ]
+            },
+            {
+              "id": "m6",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_SIX"
+              ]
+            },
+            {
+              "id": "m7",
+              "commands": [
+                "joininstance MASTER_CATACOMBS_FLOOR_SEVEN"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "class",
+        "cata"
+      ]
+    },
+    {
+      "id": "kuudra",
+      "category": "kuudra",
+      "icon": "minecraft:magma_block",
+      "color": "#FFAA00",
+      "max_size": 4,
+      "launch": "host",
+      "options": [
+        {
+          "id": "kuudra_tier",
+          "values": [
+            {
+              "id": "normal",
+              "commands": [
+                "joininstance KUUDRA_NORMAL"
+              ]
+            },
+            {
+              "id": "hot",
+              "commands": [
+                "joininstance KUUDRA_HOT"
+              ]
+            },
+            {
+              "id": "burning",
+              "commands": [
+                "joininstance KUUDRA_BURNING"
+              ]
+            },
+            {
+              "id": "fiery",
+              "commands": [
+                "joininstance KUUDRA_FIERY"
+              ]
+            },
+            {
+              "id": "infernal",
+              "commands": [
+                "joininstance KUUDRA_INFERNAL"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "kuudra",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "diana",
+      "category": "misc",
+      "icon": "minecraft:golden_shovel",
+      "color": "#FFAA00",
+      "max_size": 5,
+      "launch": "all",
+      "options": [
+        {
+          "id": "island",
+          "values": [
+            {
+              "id": "hub",
+              "commands": [
+                "warp hub"
+              ]
+            }
+          ]
+        }
+      ],
+      "stats": [
+        "sb",
+        "skill_combat"
+      ]
+    },
+    {
+      "id": "other",
+      "category": "misc",
+      "icon": "minecraft:name_tag",
+      "color": "#FFFFFF",
+      "max_size": 10,
+      "launch": "none",
+      "stats": [
+        "sb"
+      ]
+    }
   ]
 }

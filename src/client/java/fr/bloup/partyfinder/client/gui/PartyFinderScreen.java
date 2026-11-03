@@ -6,6 +6,7 @@ import fr.bloup.partyfinder.client.activity.Activity;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.PartySync;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -80,7 +81,9 @@ public class PartyFinderScreen extends Screen {
         ownButton = addRenderableWidget(Button.builder(Component.empty(),
                 b -> minecraft.gui.setScreen(new CreateListingScreen(this))).bounds(col2, row1, third, 20).build());
         delistButton = addRenderableWidget(Button.builder(Component.translatable("partyfinder.screen.delist"),
-                b -> BackendConnection.delist()).bounds(col3, row1, lastWidth, 20).build());
+                b -> {
+                    if (!PartySync.leave()) BackendConnection.delist();
+                }).bounds(col3, row1, lastWidth, 20).build());
         requestsButton = addRenderableWidget(Button.builder(Component.empty(),
                 b -> minecraft.gui.setScreen(new JoinRequestsScreen(this))).bounds(left, row2, third, 20).build());
         reportButton = addRenderableWidget(Button.builder(Component.translatable("partyfinder.screen.report"), b -> {
@@ -138,7 +141,9 @@ public class PartyFinderScreen extends Screen {
         reportButton.active = online && selected != null && !selectedIsOwn;
         ownButton.active = online;
         ownButton.setMessage(Component.translatable(hasOwn ? "partyfinder.screen.edit" : "partyfinder.screen.create"));
-        delistButton.active = online && hasOwn;
+        boolean joined = PartySync.joinedListing().isPresent();
+        delistButton.active = online && (hasOwn || joined);
+        delistButton.setMessage(Component.translatable(joined ? "partyfinder.screen.leave" : "partyfinder.screen.delist"));
         int requests = PartyFinderState.joinRequests().size();
         requestsButton.active = requests > 0;
         requestsButton.setMessage(Component.translatable("partyfinder.screen.requests", requests));

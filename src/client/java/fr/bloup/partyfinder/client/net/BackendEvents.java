@@ -4,7 +4,9 @@ import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.Moderation;
+import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.ReportSummary;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -42,12 +44,13 @@ public final class BackendEvents {
                 .append(chatButton("partyfinder.chat.deny", ChatFormatting.RED, "/partyfinder deny " + from.name())));
     }
 
-    public static void onJoinResponse(Listing.Player owner, boolean accept) {
+    public static void onJoinResponse(String listingId, Listing.Player owner, boolean accept) {
         if (!PartyFinderState.consumeRequested(owner.uuid())) return;
         if (!accept) {
             PartyActions.chat(Component.translatable("partyfinder.chat.join_denied", owner.name()).withStyle(ChatFormatting.RED));
             return;
         }
+        PartySync.onJoinAccepted(listingId);
         PartyActions.chat(Component.translatable("partyfinder.chat.join_accepted", owner.name()).withStyle(ChatFormatting.GREEN));
         if (PartyFinderConfig.get().autoAcceptInvites) PartyActions.acceptInviteLater(owner.name());
     }
@@ -66,6 +69,17 @@ public final class BackendEvents {
         }
         PartyActions.chat(line.append(" ").append(chatButton("partyfinder.chat.open_moderation", ChatFormatting.AQUA, "/partyfinder mod")));
         BackendConnection.opReports();
+    }
+
+    public static void onPartyFull(Listing listing, boolean canLaunch) {
+        Minecraft mc = Minecraft.getInstance();
+        Component title = Activities.get(listing.activity()).title(listing.options());
+        SystemToast.addOrUpdate(mc.gui.toastManager(), TOAST,
+                Component.translatable("partyfinder.toast.full.title"),
+                title);
+        MutableComponent line = Component.translatable("partyfinder.chat.party_full", title).withStyle(ChatFormatting.GREEN);
+        if (canLaunch) line.append(" ").append(chatButton("partyfinder.chat.launch", ChatFormatting.AQUA, "/partyfinder go"));
+        PartyActions.chat(line);
     }
 
     public static void onInfo(String key, List<String> args) {

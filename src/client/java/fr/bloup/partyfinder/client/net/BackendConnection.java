@@ -10,6 +10,7 @@ import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.ReportSummary;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
@@ -21,6 +22,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -30,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public final class BackendConnection {
-    private static final int PROTOCOL = 2;
+    private static final int PROTOCOL = 3;
     private static final int CLOSE_BANNED = 4004;
     private static final int CLOSE_OUTDATED = 4005;
     private static final int MAX_MESSAGE_CHARS = 4 * 1024 * 1024;
@@ -143,12 +146,14 @@ public final class BackendConnection {
         sendChain = sendChain.handle((r, e) -> null).thenCompose(v -> ws.sendText(text, true));
     }
 
-    public static void publish(String activity, String note, String requirements, int size, int maxSize, int maxReports) {
+    public static void publish(String activity, Map<String, String> options, String note, String requirements, int maxSize, int maxReports) {
         JsonObject msg = message("publish");
         msg.addProperty("activity", activity);
+        JsonObject optionsJson = new JsonObject();
+        options.forEach(optionsJson::addProperty);
+        msg.add("options", optionsJson);
         msg.addProperty("note", note);
         msg.addProperty("requirements", requirements);
-        msg.addProperty("size", size);
         msg.addProperty("maxSize", maxSize);
         msg.addProperty("maxReports", maxReports);
         send(msg);
@@ -162,6 +167,18 @@ public final class BackendConnection {
         JsonObject msg = message("join");
         msg.addProperty("listing", listingId);
         send(msg);
+    }
+
+    public static void partyUpdate(Set<UUID> members) {
+        JsonObject msg = message("party_update");
+        JsonArray array = new JsonArray();
+        members.forEach(uuid -> array.add(uuid.toString()));
+        msg.add("members", array);
+        send(msg);
+    }
+
+    public static void leave() {
+        send(message("leave"));
     }
 
     public static void respond(Listing.Player player, boolean accept) {
@@ -332,8 +349,17 @@ public final class BackendConnection {
             }
             case "join_response" -> {
                 Listing.Player owner = player(msg.get("owner"));
+                String listingId = msg.get("listing").getAsString();
                 boolean accept = msg.get("accept").getAsBoolean();
-                if (owner != null) onClient(() -> BackendEvents.onJoinResponse(owner, accept));
+                if (owner != null) onClient(() -> BackendEvents.onJoinResponse(listingId, owner, accept));
+            }
+            case "kick_member" -> {
+                Listing.Player member = player(msg);
+                if (member != null) onClient(() -> PartySync.onKickMember(member.uuid(), member.name()));
+            }
+            case "party_removed" -> {
+                String listingId = msg.get("listing").getAsString();
+                onClient(() -> PartySync.onPartyRemoved(listingId));
             }
             case "error" -> {
                 String key = msg.get("key").getAsString();

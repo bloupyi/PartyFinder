@@ -19,6 +19,8 @@
     "reports_some": "#FF5555",
     "reports_none": "#55FF55",
     "report_limit": "#AAAAAA",
-    "banned": "#AA0000"
+    "banned": "#AA0000",
+    "leader": "#FFAA00",
+    "stat": "#55FFFF"
   }
 }

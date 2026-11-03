@@ -6,6 +6,7 @@ import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.PartySync;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -108,6 +109,9 @@ public class CategoryMenuScreen extends Screen {
             case REQUESTS -> minecraft.gui.setScreen(new JoinRequestsScreen(this));
             case MODERATION -> minecraft.gui.setScreen(new ModerationScreen(this));
             case RECONNECT -> BackendConnection.reconnect();
+            case LAUNCH -> {
+                if (PartySync.launch()) onClose();
+            }
             case CLOSE -> onClose();
         }
         return true;
@@ -157,6 +161,17 @@ public class CategoryMenuScreen extends Screen {
                 lines.add(Component.translatable("partyfinder.status." + status.name().toLowerCase(Locale.ROOT)).withColor(statusColor(status)));
                 lines.add(Component.empty());
                 lines.add(PartyFinderState.selfReports().describe().getFirst());
+            }
+            case LAUNCH -> {
+                lines.add(Component.translatable("partyfinder.menu.launch").withStyle(ChatFormatting.GREEN));
+                PartySync.currentListing().ifPresentOrElse(listing -> {
+                    lines.add(Activities.get(listing.activity()).title(listing.options()).copy().withStyle(ChatFormatting.GRAY));
+                    lines.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withStyle(ChatFormatting.GRAY));
+                    lines.add(Component.empty());
+                    lines.add(PartySync.canLaunch(listing)
+                            ? Component.translatable("partyfinder.menu.launch.click").withStyle(ChatFormatting.YELLOW)
+                            : Component.translatable("partyfinder.error.cannot_launch").withStyle(ChatFormatting.RED));
+                }, () -> lines.add(Component.translatable("partyfinder.error.not_in_finder_party").withStyle(ChatFormatting.RED)));
             }
             case CLOSE -> lines.add(Component.translatable("partyfinder.menu.close").withStyle(ChatFormatting.RED));
         }

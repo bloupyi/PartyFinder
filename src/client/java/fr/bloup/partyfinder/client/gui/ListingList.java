@@ -2,6 +2,7 @@ package fr.bloup.partyfinder.client.gui;
 
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.Activity;
+import fr.bloup.partyfinder.client.activity.StatFormat;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.ReportSummary;
@@ -12,6 +13,7 @@ import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,7 +107,8 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
             g.text(font, slots, right - slotsWidth, line1, slotsColor);
 
             int titleRoom = right - slotsWidth - 6 - textX;
-            String title = clip(font, activity.name().getString(), titleRoom);
+            Component fullTitle = activity.title(listing.options());
+            String title = clip(font, fullTitle.getString(), titleRoom);
             g.text(font, title, textX, line1, 0xFF000000 | activity.color());
             ReportSummary reports = listing.ownerReports();
             String badge = Component.translatable("partyfinder.report.badge", reports.count()).getString();
@@ -141,7 +144,7 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
 
             if (hovered) {
                 List<Component> tooltip = new ArrayList<>();
-                tooltip.add(activity.name().copy().withColor(activity.color()));
+                tooltip.add(fullTitle.copy().withColor(activity.color()));
                 tooltip.add(Component.literal(listing.owner().name()).withColor(0xAAAAAA));
                 tooltip.add(Component.literal(note));
                 if (!listing.requirements().isEmpty()) tooltip.add(Component.literal(listing.requirements()).withColor(0xFFAA00));
@@ -149,9 +152,30 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
                     tooltip.add(Component.translatable("partyfinder.listing.max_reports.tooltip", listing.maxReports()).withColor(0xAAAAAA));
                 }
                 tooltip.addAll(reports.describe());
+                tooltip.add(Component.empty());
+                tooltip.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withColor(0xFFFFFF));
+                for (Listing.Member member : listing.members()) tooltip.add(memberLine(listing, activity, member));
                 g.setComponentTooltipForNextFrame(font, tooltip, mouseX, mouseY);
             }
         }
+    }
+
+    private static Component memberLine(Listing listing, Activity activity, Listing.Member member) {
+        boolean leader = member.uuid().equals(listing.owner().uuid());
+        String name = member.name() != null ? member.name() : "?";
+        MutableComponent line = Component.literal(" " + (leader ? "★ " : "- ") + name)
+                .withColor(leader ? Activities.color("leader", 0xFFAA00) : Activities.color("owner", 0xAAAAAA));
+        List<Component> stats = StatFormat.format(activity.stats(), member.stats());
+        if (!stats.isEmpty()) {
+            line.append(Component.literal("  "));
+            for (int i = 0; i < stats.size(); i++) {
+                if (i > 0) line.append(Component.literal(" · ").withColor(0x808080));
+                line.append(stats.get(i).copy().withColor(Activities.color("stat", 0x55FFFF)));
+            }
+        } else if (member.stats() == null) {
+            line.append(Component.literal("  ...").withColor(0x808080));
+        }
+        return line;
     }
 
     private static String clip(Font font, String text, int maxWidth) {

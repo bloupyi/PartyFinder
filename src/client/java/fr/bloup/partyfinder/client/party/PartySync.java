@@ -1,0 +1,137 @@
+package fr.bloup.partyfinder.client.party;
+
+import fr.bloup.partyfinder.client.PartyActions;
+import fr.bloup.partyfinder.client.activity.Activities;
+import fr.bloup.partyfinder.client.activity.Activity;
+import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
+import fr.bloup.partyfinder.client.net.BackendConnection;
+import fr.bloup.partyfinder.client.net.BackendEvents;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+/**
+ * Keeps the finder party and the real Hypixel party linked: the host pushes its Hypixel party to the backend
+ * (size, members, stats), finder members who leave the mod get kicked, and members who left the Hypixel party
+ * drop out of the finder.
+ */
+public final class PartySync {
+    private static final long SYNC_INTERVAL_MS = 5_000;
+    private static final long JOIN_GRACE_MS = 20_000;
+
+    private static final Set<String> notifiedFull = new HashSet<>();
+    private static String joinedListingId;
+    private static long joinedAt;
+    private static long lastSync;
+
+    private PartySync() {
+    }
+
+    public static Optional<Listing> joinedListing() {
+        return joinedListingId == null ? Optional.empty() : PartyFinderState.get(joinedListingId);
+    }
+
+    /** The listing the local player is part of, as host or as finder member. */
+    public static Optional<Listing> currentListing() {
+        return PartyFinderState.ownListing().or(PartySync::joinedListing);
+    }
+
+    public static void tick(Minecraft mc) {
+        boolean online = BackendConnection.isConnected();
+        boolean needsParty = online && currentListing().isPresent();
+        HypixelBridge.tick(needsParty);
+        if (!online) return;
+        long now = System.currentTimeMillis();
+
+        PartyFinderState.ownListing().ifPresent(listing -> {
+            if (!HypixelBridge.isKnown() || !HypixelBridge.isLeaderOrSolo() || now - lastSync < SYNC_INTERVAL_MS) return;
+            Set<UUID> party = HypixelBridge.members();
+            Set<UUID> listed = listing.members().stream().map(Listing.Member::uuid).collect(Collectors.toSet());
+            if (!party.equals(listed)) {
+                lastSync = now;
+                BackendConnection.partyUpdate(party);
+            }
+        });
+
+        if (joinedListingId != null) {
+            Optional<Listing> joined = joinedListing();
+            boolean leftParty = HypixelBridge.isKnown() && now - joinedAt > JOIN_GRACE_MS && joined
+                    .map(l -> !HypixelBridge.inParty() || !HypixelBridge.leader().map(l.owner().uuid()::equals).orElse(false))
+                    .orElse(true);
+            if (leftParty) joinedListingId = null;
+        }
+
+        for (Listing listing : List.of(PartyFinderState.ownListing(), joinedListing()).stream().flatMap(Optional::stream).toList()) {
+            if (!listing.isFull()) {
+                notifiedFull.remove(listing.id());
+            } else if (notifiedFull.add(listing.id())) {
+                BackendEvents.onPartyFull(listing, canLaunch(listing));
+            }
+        }
+    }
+
+    public static void onJoinAccepted(String listingId) {
+        joinedListingId = listingId;
+        joinedAt = System.currentTimeMillis();
+        HypixelBridge.requestRefresh(3_000);
+    }
+
+    public static void onPartyRemoved(String listingId) {
+        if (!listingId.equals(joinedListingId)) return;
+        String host = joinedListing().map(l -> l.owner().name()).orElse("?");
+        joinedListingId = null;
+        PartyActions.chat(Component.translatable("partyfinder.chat.party_removed", host).withStyle(ChatFormatting.YELLOW));
+    }
+
+    /** Backend asks the host to kick a finder member who left through the mod (or disconnected for too long). */
+    public static void onKickMember(UUID uuid, String name) {
+        if (PartyFinderState.ownListing().isEmpty() || !HypixelBridge.isLeaderOrSolo()) return;
+        if (!HypixelBridge.members().contains(uuid)) return;
+        if (PartyActions.partyCommand("kick", name)) {
+            PartyActions.chat(Component.translatable("partyfinder.chat.member_left", name).withStyle(ChatFormatting.YELLOW));
+            HypixelBridge.requestRefresh(1_500);
+        }
+    }
+
+    public static boolean leave() {
+        if (joinedListingId == null) return false;
+        joinedListingId = null;
+        BackendConnection.leave();
+        PartyActions.command("party leave");
+        HypixelBridge.requestRefresh(1_500);
+        return true;
+    }
+
+    public static boolean canLaunch(Listing listing) {
+        Activity activity = Activities.get(listing.activity());
+        boolean host = PartyFinderState.isSelf(listing.owner());
+        if (activity.launchCommands(listing.options()).isEmpty()) return false;
+        return switch (activity.launch()) {
+            case NONE -> false;
+            case HOST -> host;
+            case ALL -> true;
+        };
+    }
+
+    /** Runs the activity's launch commands (floor queue, island warp...). Always triggered by the player. */
+    public static boolean launch() {
+        Optional<Listing> listing = currentListing();
+        if (listing.isEmpty() || !canLaunch(listing.get())) return false;
+        Activity activity = Activities.get(listing.get().activity());
+        PartyActions.runCommands(activity.launchCommands(listing.get().options()));
+        return true;
+    }
+
+    public static void reset() {
+        joinedListingId = null;
+        notifiedFull.clear();
+        lastSync = 0;
+    }
+}

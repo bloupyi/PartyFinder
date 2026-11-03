@@ -5,13 +5,16 @@ import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.gui.CategoryMenuScreen;
 import fr.bloup.partyfinder.client.gui.PfSprites;
+import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
+import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.mixin.client.AbstractContainerScreenAccessor;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
@@ -34,6 +37,7 @@ public class PartyfinderClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         PartyFinderConfig.load();
+        HypixelBridge.init();
 
         openKey = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.partyfinder.open", InputConstants.Type.KEYSYM, InputConstants.KEY_O, CATEGORY));
@@ -42,6 +46,7 @@ public class PartyfinderClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             PartyActions.tick(mc);
+            PartySync.tick(mc);
             while (openKey.consumeClick()) {
                 if (mc.gui.screen() == null) mc.gui.setScreen(new CategoryMenuScreen(null));
             }
@@ -50,7 +55,14 @@ public class PartyfinderClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
             if (shouldConnect(mc)) BackendConnection.connect();
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> BackendConnection.disconnect());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
+            BackendConnection.disconnect();
+            HypixelBridge.reset();
+            PartySync.reset();
+        });
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay) HypixelBridge.onChat(message);
+        });
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> BackendConnection.disconnect());
 
         ScreenEvents.AFTER_INIT.register(this::addMenuButton);

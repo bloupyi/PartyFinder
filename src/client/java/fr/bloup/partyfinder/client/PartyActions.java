@@ -16,6 +16,7 @@ import java.util.List;
 public final class PartyActions {
     private static final Component PREFIX = Component.literal("[PF] ").withStyle(ChatFormatting.DARK_AQUA);
     private static final int INVITE_ACCEPT_DELAY_TICKS = 20;
+    private static final int COMMAND_SPACING_TICKS = 10;
 
     private static final List<Delayed> DELAYED = new ArrayList<>();
     private static Screen pendingScreen;
@@ -62,7 +63,7 @@ public final class PartyActions {
         if (player != null) player.connection.sendCommand(command);
     }
 
-    private static boolean partyCommand(String action, String name) {
+    public static boolean partyCommand(String action, String name) {
         // Names come from the network: never let one inject extra arguments into a command.
         if (!Listing.isValidName(name)) return false;
         command("party " + action + " " + name);
@@ -87,6 +88,16 @@ public final class PartyActions {
             BackendConnection.respond(player, false);
             return true;
         }).orElse(false);
+    }
+
+    /** Runs commands one after another, spaced out so the server does not drop them. */
+    public static void runCommands(List<String> commands) {
+        int delay = 0;
+        for (String command : commands) {
+            if (!command.matches("[A-Za-z0-9_ ]{1,64}")) continue;
+            DELAYED.add(new Delayed(Math.max(1, delay), () -> command(command)));
+            delay += COMMAND_SPACING_TICKS;
+        }
     }
 
     public static void acceptInviteLater(String owner) {

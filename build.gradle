@@ -8,6 +8,21 @@ base {
 }
 
 repositories {
+	maven {
+		name = "Hypixel"
+		url = "https://repo.hypixel.net/repository/Hypixel/"
+	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter {
+			includeGroup "maven.modrinth"
+		}
+	}
 }
 
 loom {
@@ -31,6 +46,9 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	compileOnly "net.hypixel:mod-api:${project.hypixel_mod_api_version}"
+	localRuntime "maven.modrinth:hypixel-mod-api:${project.hypixel_mod_api_fabric_version}"
 }
 
 processResources {

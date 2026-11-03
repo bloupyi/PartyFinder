@@ -68,6 +68,11 @@
       "slot": 35,
       "action": "reconnect",
       "icon": "minecraft:comparator"
+    },
+    {
+      "slot": 33,
+      "action": "launch",
+      "icon": "minecraft:ender_eye"
     }
   ]
 }
