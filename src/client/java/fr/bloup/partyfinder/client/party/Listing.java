@@ -25,6 +25,7 @@ public record Listing(
         List<String> roles,
         ReportSummary ownerReports,
         List<Member> members,
+        UUID leader,
         long createdAt,
         long updatedAt
 ) {
@@ -48,6 +49,15 @@ public record Listing(
         public JsonObject stats() {
             return rawStats != null && rawStats.isJsonObject() ? rawStats.getAsJsonObject() : null;
         }
+    }
+
+    /** Current Hypixel party leader as reported by the host; differs from the owner after an automatic transfer. */
+    public UUID hypixelLeader() {
+        return leader != null && hasMember(leader) ? leader : owner.uuid();
+    }
+
+    public boolean hasMember(UUID uuid) {
+        return members.stream().anyMatch(m -> m.uuid().equals(uuid));
     }
 
     public boolean isFull() {
@@ -132,6 +142,7 @@ public record Listing(
                 cleanRoles(raw.roles()),
                 ReportSummary.sanitize(raw.ownerReports()),
                 cleanMembers(raw.members(), raw.owner()),
+                raw.leader(),
                 raw.createdAt(),
                 raw.updatedAt());
     }

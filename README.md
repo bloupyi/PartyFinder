@@ -9,6 +9,7 @@ Client-side Fabric mod (Minecraft 26.2) adding a party finder for Hypixel SkyBlo
 - `/pf` or `/partyfinder` (or the `O` key) opens the category menu, then the list of parties
 - `/pf create`, `/pf delist`, `/pf accept <player>`, `/pf deny <player>`, `/pf report <player>`, `/pf reconnect`, `/pf reload`
 - `/pf go` launches the activity once the party is full (floor queue, island warp...), `/pf leave` leaves a finder party
+- `/pf warp` warps the party; in activities that allow transfers (mineshafts) any member can use it and gets the lead transferred automatically first
 - `/pf mod` opens the moderation menu (operators only)
 - `/pf config` opens the settings, `/pf hud` configures the party HUD, `/pf hud edit` moves it
 
@@ -24,6 +25,7 @@ Settings: `/pf config` (or `config/partyfinder.json`: `autoAcceptInvites`, `noti
 - **History**: past finder parties are kept locally to invite the same players again, republish the same listing, +1 or report.
 - **Event alerts**: toast and chat when the Fishing Festival, Spooky Festival, Mining Fiesta or Diana starts (optionally a few minutes before), with the number of open parties and a View button (`/pf event <id>`).
 - **Presets**: the last listing is remembered (per activity too) and named presets can be saved; the menu offers a one-click Republish.
+- **Automatic transfers**: activities with `"transfer": true` in `activities.json` let members take the Hypixel lead to warp. The PartyFinder leader keeps control: only they accept join requests (whoever holds the Hypixel lead sends the invite), a member holding the lead hands it back when disconnecting, and in a finder party only the PartyFinder leader can `/p invite`, `/p transfer`, `/p kick`, `/p disband`, `/p promote` or `/p demote` (their invites are relayed to the current Hypixel leader).
 
 ## Party HUD
 

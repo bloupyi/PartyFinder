@@ -456,5 +456,17 @@
   "partyfinder.chat.published": "Listing published: %s",
   "partyfinder.error.no_response": "The PartyFinder server did not answer. Try again or reconnect.",
   "partyfinder.command.sounds.on": "Server sounds are shown in chat (click to copy). Run /pf sounds again to stop.",
-  "partyfinder.command.sounds.off": "Sound display stopped."
+  "partyfinder.command.sounds.off": "Sound display stopped.",
+  "partyfinder.error.transfer_not_allowed": "This activity doesn't allow party transfers, only the leader can warp.",
+  "partyfinder.error.not_in_hypixel_party": "You are not in a Hypixel party.",
+  "partyfinder.error.leader_offline": "The current party leader is not connected to PartyFinder.",
+  "partyfinder.chat.warp_requested": "Asking the current leader for the party lead, warping as soon as it's yours...",
+  "partyfinder.chat.warp_timeout": "The party lead was not transferred to you, warp cancelled.",
+  "partyfinder.chat.transferring": "Transferring the party to %s so they can warp it.",
+  "partyfinder.chat.inviting_for": "Inviting %s on behalf of the PartyFinder leader.",
+  "partyfinder.chat.invite_forwarded": "You don't hold the Hypixel lead: %s will be invited by the current leader.",
+  "partyfinder.chat.command_blocked": "In a PartyFinder party, only the PartyFinder leader can invite, transfer, kick or disband. Use /pf warp to warp.",
+  "partyfinder.create.activity.pick": "Choose an activity",
+  "partyfinder.create.activity.search": "Search an activity...",
+  "partyfinder.create.activity.none": "No matching activity."
 }

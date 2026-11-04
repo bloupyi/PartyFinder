@@ -16,6 +16,7 @@ import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
+import fr.bloup.partyfinder.client.party.PartyTransfer;
 import fr.bloup.partyfinder.client.party.ReportSummary;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
@@ -43,7 +44,7 @@ import java.util.regex.Pattern;
 
 public final class BackendConnection {
     private static final String BACKEND_URL = "wss://partyfinder.bloup.site";
-    private static final int PROTOCOL = 5;
+    private static final int PROTOCOL = 6;
     private static final int CLOSE_BANNED = 4004;
     private static final int CLOSE_OUTDATED = 4005;
     private static final int MAX_MESSAGE_CHARS = 4 * 1024 * 1024;
@@ -217,8 +218,9 @@ public final class BackendConnection {
         send(msg);
     }
 
-    public static void partyUpdate(Set<UUID> members) {
+    public static void partyUpdate(Set<UUID> members, UUID leader) {
         JsonObject msg = message("party_update");
+        msg.addProperty("leader", leader.toString());
         JsonArray array = new JsonArray();
         members.forEach(uuid -> array.add(uuid.toString()));
         msg.add("members", array);
@@ -244,10 +246,23 @@ public final class BackendConnection {
         send(message("leave"));
     }
 
-    public static void respond(Listing.Player player, boolean accept) {
+    public static void respond(Listing.Player player, boolean accept, boolean invited) {
         JsonObject msg = message("respond");
         msg.addProperty("player", player.uuid().toString());
         msg.addProperty("accept", accept);
+        msg.addProperty("invited", invited);
+        send(msg);
+    }
+
+    /** Asks the current Hypixel leader of the finder party to transfer the lead to us so we can /p warp. */
+    public static void warp() {
+        send(message("warp"));
+    }
+
+    /** PF leader who lost the Hypixel lead: the current Hypixel leader sends the invite. */
+    public static void invite(String name) {
+        JsonObject msg = message("invite");
+        msg.addProperty("name", name);
         send(msg);
     }
 
@@ -423,11 +438,21 @@ public final class BackendConnection {
                 Listing.Player owner = player(msg.get("owner"));
                 String listingId = msg.get("listing").getAsString();
                 boolean accept = msg.get("accept").getAsBoolean();
-                if (owner != null) onClient(() -> BackendEvents.onJoinResponse(listingId, owner, accept));
+                String inviter = msg.has("inviter") ? msg.get("inviter").getAsString() : null;
+                if (owner != null) onClient(() -> BackendEvents.onJoinResponse(listingId, owner, inviter, accept));
             }
             case "kick_member" -> {
                 Listing.Player member = player(msg);
                 if (member != null) onClient(() -> PartySync.onKickMember(member.uuid(), member.name()));
+            }
+            case "transfer_request" -> {
+                Listing.Player to = player(msg.get("to"));
+                String listingId = msg.get("listing").getAsString();
+                if (to != null) onClient(() -> PartyTransfer.onTransferRequest(listingId, to));
+            }
+            case "invite_member" -> {
+                String name = msg.get("name").getAsString();
+                onClient(() -> PartyTransfer.onInviteMember(name));
             }
             case "member_status" -> {
                 UUID uuid = UUID.fromString(msg.get("uuid").getAsString());

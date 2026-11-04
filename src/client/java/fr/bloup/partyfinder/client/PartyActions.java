@@ -1,5 +1,6 @@
 package fr.bloup.partyfinder.client;
 
+import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
@@ -20,6 +21,7 @@ public final class PartyActions {
 
     private static final List<Delayed> DELAYED = new ArrayList<>();
     private static Screen pendingScreen;
+    private static boolean sendingOwn;
 
     private static final class Delayed {
         private int ticks;
@@ -61,7 +63,22 @@ public final class PartyActions {
 
     public static void command(String command) {
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) player.connection.sendCommand(command);
+        if (player == null) return;
+        sendingOwn = true;
+        try {
+            player.connection.sendCommand(command);
+        } finally {
+            sendingOwn = false;
+        }
+    }
+
+    /** True while the mod itself sends a command, so the party command guard lets it through. */
+    public static boolean isSendingOwnCommand() {
+        return sendingOwn;
+    }
+
+    public static void later(int ticks, Runnable task) {
+        DELAYED.add(new Delayed(Math.max(1, ticks), task));
     }
 
     public static boolean partyCommand(String action, String name) {
@@ -79,7 +96,10 @@ public final class PartyActions {
 
     public static boolean accept(String name) {
         return PartyFinderState.takeJoinRequest(name).map(player -> {
-            if (partyCommand("invite", player.name())) BackendConnection.respond(player, true);
+            if (!Listing.isValidName(player.name())) return true;
+            // After an automatic transfer only the current Hypixel leader can invite; the backend forwards it otherwise.
+            boolean invited = HypixelBridge.isLeaderOrSolo() && partyCommand("invite", player.name());
+            BackendConnection.respond(player, true, invited);
             return true;
         }).orElse(false);
     }
@@ -97,7 +117,7 @@ public final class PartyActions {
 
     public static boolean deny(String name) {
         return PartyFinderState.takeJoinRequest(name).map(player -> {
-            BackendConnection.respond(player, false);
+            BackendConnection.respond(player, false, false);
             return true;
         }).orElse(false);
     }

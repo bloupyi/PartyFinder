@@ -69,16 +69,17 @@ public class CategoryMenuScreen extends Screen {
         panelTop = top + imageHeight + PANEL_GAP;
 
         int buttonWidth = (IMAGE_WIDTH - 16 - 4) / 2;
+        int buttonY = panelTop + 17 + 2;
+        leaveButton = addRenderableWidget(Button.builder(Component.empty(), b -> leaveOrDisband())
+                .bounds(left + 8, buttonY, buttonWidth, 20).build());
         launchButton = addRenderableWidget(Button.builder(Component.translatable("partyfinder.menu.launch"), b -> {
             if (PartySync.currentListing().isEmpty()) {
-                // Not in a finder party: the left button republishes the last listing in one click.
+                // Not in a finder party: this button republishes the last listing in one click.
                 ListingDrafts.last().ifPresent(BackendConnection::publish);
             } else if (PartySync.launch()) {
                 onClose();
             }
-        }).bounds(left + 8, panelTop + 17, buttonWidth, 20).build());
-        leaveButton = addRenderableWidget(Button.builder(Component.empty(), b -> leaveOrDisband())
-                .bounds(left + 8 + buttonWidth + 4, panelTop + 17, buttonWidth, 20).build());
+        }).bounds(left + 8 + buttonWidth + 4, buttonY, buttonWidth, 20).build());
         updatePanel();
     }
 
@@ -92,27 +93,29 @@ public class CategoryMenuScreen extends Screen {
         Optional<Listing> listing = PartySync.currentListing();
         boolean host = PartyFinderState.ownListing().isPresent();
         Optional<ListingDraft> last = ListingDrafts.last();
+        boolean inParty = listing.isPresent() || HypixelBridge.inParty();
         if (listing.isEmpty() && last.isPresent()) {
             launchButton.setMessage(Component.translatable("partyfinder.menu.republish"));
-            launchButton.active = BackendConnection.isConnected() && HypixelBridge.isLeaderOrSolo();
-            launchButton.setTooltip(Tooltip.create(Component.translatable("partyfinder.menu.republish.tooltip",
-                    Activities.get(last.get().activity()).title(last.get().options()))));
+            launchButton.active = BackendConnection.isConnected() && PartySync.canHost();
+            launchButton.setTooltip(inParty ? Tooltip.create(Component.translatable("partyfinder.menu.republish.tooltip",
+                    Activities.get(last.get().activity()).title(last.get().options()))) : null);
         } else {
             launchButton.setMessage(Component.translatable("partyfinder.menu.launch"));
             launchButton.active = listing.map(PartySync::canLaunch).orElse(false);
-            launchButton.setTooltip(launchButton.active ? null : Tooltip.create(Component.translatable(listing.isPresent()
+            launchButton.setTooltip(launchButton.active || !inParty ? null : Tooltip.create(Component.translatable(listing.isPresent()
                     ? "partyfinder.error.cannot_launch" : "partyfinder.error.not_in_finder_party")));
         }
         leaveButton.active = listing.isPresent() || HypixelBridge.inParty();
-        // Only the Hypixel party leader may disband; a listing host who is not leader can only delist.
-        boolean leader = HypixelBridge.isLeaderOrSolo();
+        // Only the Hypixel party leader may disband; a listing host who is not leader can only delist. A finder member
+        // holding the lead after an automatic transfer only leaves.
+        boolean leader = PartySync.canHost();
         leaveButton.setMessage(Component.translatable(leader && (host || HypixelBridge.inParty()) ? "partyfinder.menu.disband"
                 : host ? "partyfinder.menu.delist" : "partyfinder.menu.leave"));
     }
 
     private void leaveOrDisband() {
         boolean listingHost = PartyFinderState.ownListing().isPresent();
-        boolean leader = HypixelBridge.isLeaderOrSolo();
+        boolean leader = PartySync.canHost();
         boolean host = leader && (listingHost || HypixelBridge.inParty());
         if (listingHost && !leader) {
             BackendConnection.delist();
@@ -142,12 +145,21 @@ public class CategoryMenuScreen extends Screen {
         return false;
     }
 
+    /** Container textures go in the background stratum, otherwise they cover the panel buttons. */
     @Override
-    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(g, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         int topHeight = layout.rows() * 18 + 17;
         g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, top, 0, 0, IMAGE_WIDTH, topHeight, 256, 256);
         g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, top + topHeight, 0, 215, IMAGE_WIDTH, 7, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop, 0, 0, IMAGE_WIDTH, 17, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop + 17, 0, 128, IMAGE_WIDTH, 24, IMAGE_WIDTH, 1, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop + 17 + 24, 0, 215, IMAGE_WIDTH, 7, 256, 256);
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
 
         int titleColor = Activities.color("menu_title", 0x404040);
         g.text(font, title, left + 8, top + 6, titleColor, false);
@@ -183,9 +195,6 @@ public class CategoryMenuScreen extends Screen {
 
     /** "My party" panel under the chest, drawn from the same container texture so resource packs restyle it too. */
     private void drawPanel(GuiGraphicsExtractor g) {
-        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop, 0, 0, IMAGE_WIDTH, 17, 256, 256);
-        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop + 17, 0, 128, IMAGE_WIDTH, 24, IMAGE_WIDTH, 1, 256, 256);
-        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, panelTop + 17 + 24, 0, 215, IMAGE_WIDTH, 7, 256, 256);
         int color = Activities.color("menu_title", 0x404040);
         Component label = PartySync.currentListing()
                 .map(l -> (Component) Component.translatable("partyfinder.menu.my_party",

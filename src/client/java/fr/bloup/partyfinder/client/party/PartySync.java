@@ -46,6 +46,15 @@ public final class PartySync {
         return PartyFinderState.ownListing().or(PartySync::joinedListing);
     }
 
+    /** Hypixel leader (or solo) who is not inside someone else's finder party: may publish a listing. */
+    public static boolean canHost() {
+        return HypixelBridge.isLeaderOrSolo() && joinedListing().isEmpty();
+    }
+
+    public static boolean allowsTransfer(Listing listing) {
+        return Activities.get(listing.activity()).transfer();
+    }
+
     public static void tick(Minecraft mc) {
         trackHistory(mc);
         boolean online = BackendConnection.isConnected();
@@ -55,7 +64,7 @@ public final class PartySync {
         long now = System.currentTimeMillis();
 
         PartyFinderState.ownListing().ifPresent(listing -> {
-            if (HypixelBridge.isKnown() && !HypixelBridge.isLeaderOrSolo()) {
+            if (HypixelBridge.isKnown() && !HypixelBridge.isLeaderOrSolo() && !allowsTransfer(listing)) {
                 // Only the party leader may advertise the party: leadership moved, so the listing goes away.
                 if (listing.id().equals(delistedFor)) return;
                 delistedFor = listing.id();
@@ -66,16 +75,17 @@ public final class PartySync {
             if (!HypixelBridge.isKnown() || now - lastSync < SYNC_INTERVAL_MS) return;
             Set<UUID> party = HypixelBridge.members();
             Set<UUID> listed = listing.members().stream().map(Listing.Member::uuid).collect(Collectors.toSet());
-            if (!party.equals(listed)) {
+            UUID leader = HypixelBridge.leader().filter(party::contains).orElse(listing.owner().uuid());
+            if (!party.equals(listed) || !leader.equals(listing.hypixelLeader())) {
                 lastSync = now;
-                BackendConnection.partyUpdate(party);
+                BackendConnection.partyUpdate(party, leader);
             }
         });
 
         if (joinedListingId != null) {
             Optional<Listing> joined = joinedListing();
             boolean leftParty = HypixelBridge.isKnown() && now - joinedAt > JOIN_GRACE_MS && joined
-                    .map(l -> !HypixelBridge.inParty() || !HypixelBridge.leader().map(l.owner().uuid()::equals).orElse(false))
+                    .map(l -> !HypixelBridge.inParty() || !HypixelBridge.members().contains(l.owner().uuid()))
                     .orElse(true);
             if (leftParty) joinedListingId = null;
         }
@@ -116,9 +126,9 @@ public final class PartySync {
         PartyActions.chat(Component.translatable("partyfinder.chat.party_removed", host).withStyle(ChatFormatting.YELLOW));
     }
 
-    /** Backend asks the host to kick a finder member who left through the mod (or disconnected for too long). */
+    /** Backend asks the Hypixel leader to kick a finder member who left through the mod (or disconnected for too long). */
     public static void onKickMember(UUID uuid, String name) {
-        if (PartyFinderState.ownListing().isEmpty() || !HypixelBridge.isLeaderOrSolo()) return;
+        if (currentListing().isEmpty() || !HypixelBridge.inParty() || !HypixelBridge.isLeaderOrSolo()) return;
         if (!HypixelBridge.members().contains(uuid)) return;
         if (PartyActions.partyCommand("kick", name)) {
             PartyActions.chat(Component.translatable("partyfinder.chat.member_left", name).withStyle(ChatFormatting.YELLOW));

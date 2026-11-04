@@ -50,7 +50,7 @@ public final class BackendEvents {
                 .append(chatButton("partyfinder.chat.deny", ChatFormatting.RED, "/partyfinder deny " + from.name())));
     }
 
-    public static void onJoinResponse(String listingId, Listing.Player owner, boolean accept) {
+    public static void onJoinResponse(String listingId, Listing.Player owner, String inviter, boolean accept) {
         if (!PartyFinderState.consumeRequested(owner.uuid())) return;
         if (!accept) {
             PartyActions.chat(Component.translatable("partyfinder.chat.join_denied", owner.name()).withStyle(ChatFormatting.RED));
@@ -58,7 +58,9 @@ public final class BackendEvents {
         }
         PartySync.onJoinAccepted(listingId);
         PartyActions.chat(Component.translatable("partyfinder.chat.join_accepted", owner.name()).withStyle(ChatFormatting.GREEN));
-        if (PartyFinderConfig.get().autoAcceptInvites) PartyActions.acceptInviteLater(owner.name());
+        if (PartyFinderConfig.get().autoAcceptInvites) {
+            PartyActions.acceptInviteLater(Listing.isValidName(inviter) ? inviter : owner.name());
+        }
     }
 
     public static void onReportNew(Listing.Player target, Moderation.Report report, int count) {

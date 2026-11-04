@@ -10,12 +10,14 @@ import fr.bloup.partyfinder.client.hud.PartyHud;
 import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.PartySync;
+import fr.bloup.partyfinder.client.party.PartyTransfer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -48,6 +50,7 @@ public class PartyfinderClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             PartyActions.tick(mc);
             PartySync.tick(mc);
+            PartyTransfer.tick();
             PartyStatus.tick();
             EventAlerts.tick();
             BackendConnection.checkPublishTimeout();
@@ -64,11 +67,13 @@ public class PartyfinderClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
             BackendConnection.connect();
+            PartyTransfer.onJoin();
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
             BackendConnection.disconnect();
             HypixelBridge.reset();
             PartySync.reset();
+            PartyTransfer.reset();
             PartyStatus.reset();
             PartyHud.reset();
         });
@@ -79,6 +84,7 @@ public class PartyfinderClient implements ClientModInitializer {
                 PartyStatus.onChat(message);
             }
         });
+        ClientSendMessageEvents.ALLOW_COMMAND.register(PartyTransfer::allowCommand);
         ClientLifecycleEvents.CLIENT_STOPPING.register(mc -> BackendConnection.disconnect());
 
         HudElementRegistry.attachElementAfter(VanillaHudElements.BOSS_BAR,

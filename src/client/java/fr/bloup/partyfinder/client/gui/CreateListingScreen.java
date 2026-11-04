@@ -9,6 +9,7 @@ import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.ListingDraft;
 import fr.bloup.partyfinder.client.party.ListingDrafts;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.PartySync;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
@@ -89,23 +90,11 @@ public class CreateListingScreen extends Screen {
         top = Math.max(24, (height - formHeight) / 2);
         int y = top;
 
-        List<Activity> activities = Activities.all();
-        if (!activities.isEmpty()) {
-            addRenderableWidget(CycleButton.builder(Activity::name, activity)
-                    .withValues(activities)
-                    .create(x, y, formWidth, 20, Component.translatable("partyfinder.create.activity"), (b, value) -> {
-                        ListingDraft remembered = ListingDrafts.lastFor(value.id()).orElse(null);
-                        if (remembered != null) {
-                            apply(remembered);
-                        } else {
-                            activity = value;
-                            maxSize = value.maxSize();
-                            options.clear();
-                            minStats.clear();
-                            roles.clear();
-                        }
-                        rebuildWidgets();
-                    }));
+        if (!Activities.all().isEmpty()) {
+            Component label = Component.translatable("partyfinder.create.activity").append(": ")
+                    .append(activity.name().copy().withColor(activity.color()));
+            addRenderableWidget(Button.builder(label, b -> minecraft.gui.setScreen(
+                    new ActivitySelectScreen(this, activity, this::selectActivity))).bounds(x, y, formWidth, 20).build());
         }
         y += ROW;
 
@@ -172,12 +161,26 @@ public class CreateListingScreen extends Screen {
             BackendConnection.publish(draft);
             onClose();
         }).bounds(x, y, third, 20).build());
-        publish.active = BackendConnection.isConnected() && HypixelBridge.isLeaderOrSolo();
-        if (!HypixelBridge.isLeaderOrSolo()) publish.setTooltip(Tooltip.create(Component.translatable("partyfinder.error.not_leader")));
+        publish.active = BackendConnection.isConnected() && PartySync.canHost();
+        if (!PartySync.canHost()) publish.setTooltip(Tooltip.create(Component.translatable("partyfinder.error.not_leader")));
         addRenderableWidget(Button.builder(Component.translatable("partyfinder.presets.button"),
                 b -> minecraft.gui.setScreen(new PresetsScreen(this))).bounds(x + third + 4, y, third, 20).build());
         addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
                 .bounds(x + 2 * (third + 4), y, formWidth - 2 * (third + 4), 20).build());
+    }
+
+    private void selectActivity(Activity value) {
+        if (value.id().equals(activity.id())) return;
+        ListingDraft remembered = ListingDrafts.lastFor(value.id()).orElse(null);
+        if (remembered != null) {
+            apply(remembered);
+        } else {
+            activity = value;
+            maxSize = value.maxSize();
+            options.clear();
+            minStats.clear();
+            roles.clear();
+        }
     }
 
     private Component requirementsLabel() {

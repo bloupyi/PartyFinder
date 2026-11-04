@@ -18,6 +18,7 @@ import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
+import fr.bloup.partyfinder.client.party.PartyTransfer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.network.chat.Component;
 
@@ -46,7 +47,7 @@ public final class PartyFinderCommands {
                     return 1;
                 })
                 .then(literal("create").executes(ctx -> {
-                    if (!HypixelBridge.isLeaderOrSolo()) {
+                    if (!PartySync.canHost()) {
                         ctx.getSource().sendError(Component.translatable("partyfinder.error.not_leader"));
                         return 0;
                     }
@@ -93,6 +94,10 @@ public final class PartyFinderCommands {
                     }
                     return 1;
                 }))
+                .then(literal("warp").executes(ctx -> PartyTransfer.warp().map(key -> {
+                    ctx.getSource().sendError(Component.translatable(key));
+                    return 0;
+                }).orElse(1)))
                 .then(literal("leave").executes(ctx -> {
                     if (!PartySync.leave()) {
                         ctx.getSource().sendError(Component.translatable("partyfinder.error.not_in_finder_party"));
