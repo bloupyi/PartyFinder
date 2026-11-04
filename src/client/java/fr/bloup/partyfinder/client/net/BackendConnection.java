@@ -443,7 +443,8 @@ public final class BackendConnection {
             }
             case "kick_member" -> {
                 Listing.Player member = player(msg);
-                if (member != null) onClient(() -> PartySync.onKickMember(member.uuid(), member.name()));
+                String listingId = msg.has("listing") ? msg.get("listing").getAsString() : "";
+                if (member != null) onClient(() -> PartySync.onKickMember(listingId, member.uuid(), member.name()));
             }
             case "transfer_request" -> {
                 Listing.Player to = player(msg.get("to"));
@@ -452,7 +453,8 @@ public final class BackendConnection {
             }
             case "invite_member" -> {
                 String name = msg.get("name").getAsString();
-                onClient(() -> PartyTransfer.onInviteMember(name));
+                String listingId = msg.has("listing") ? msg.get("listing").getAsString() : "";
+                onClient(() -> PartyTransfer.onInviteMember(listingId, name));
             }
             case "member_status" -> {
                 UUID uuid = UUID.fromString(msg.get("uuid").getAsString());

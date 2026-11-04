@@ -77,6 +77,54 @@ processResources {
 	}
 }
 
+// resourcepack-template/ is a complete resource pack holding every overridable asset at its default value, for pack
+// makers. Its assets are a copy of the mod's: refresh them with updateResourcePackTemplate, `check` fails when stale.
+tasks.register("updateResourcePackTemplate", Sync) {
+	group = "build"
+	description = "Copies the mod's overridable assets into resourcepack-template/."
+	from("src/client/resources/assets/partyfinder") {
+		exclude "icon.png"
+	}
+	into "resourcepack-template/assets/partyfinder"
+}
+
+tasks.register("checkResourcePackTemplate") {
+	group = "verification"
+	description = "Fails when resourcepack-template/ no longer matches the mod's assets."
+	def source = layout.projectDirectory.dir("src/client/resources/assets/partyfinder")
+	def target = layout.projectDirectory.dir("resourcepack-template/assets/partyfinder")
+	inputs.dir(source)
+	inputs.dir(target)
+	doLast {
+		def files = { File root ->
+			def found = new TreeMap<String, File>()
+			root.eachFileRecurse(groovy.io.FileType.FILES) { found[root.toPath().relativize(it.toPath()).toString().replace('\\', '/')] = it }
+			found.remove("icon.png")
+			found
+		}
+		def expected = files(source.asFile)
+		def actual = files(target.asFile)
+		def stale = (expected.keySet() + actual.keySet()).findAll {
+			!expected.containsKey(it) || !actual.containsKey(it) || !Arrays.equals(expected[it].bytes, actual[it].bytes)
+		}
+		if (!stale.isEmpty()) {
+			throw new GradleException("resourcepack-template/ is out of date (${stale.join(', ')}): run ./gradlew updateResourcePackTemplate")
+		}
+	}
+}
+
+tasks.named("check") {
+	dependsOn "checkResourcePackTemplate"
+}
+
+tasks.register("resourcePackTemplate", Zip) {
+	group = "build"
+	description = "Zips resourcepack-template/ into a ready-to-install resource pack."
+	archiveFileName = "partyfinder-resourcepack-template.zip"
+	destinationDirectory = layout.buildDirectory.dir("resourcepack")
+	from("resourcepack-template")
+}
+
 tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = "UTF-8"
 	it.options.release = 25

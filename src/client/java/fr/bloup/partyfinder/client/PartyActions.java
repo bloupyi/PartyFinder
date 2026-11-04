@@ -1,5 +1,7 @@
 package fr.bloup.partyfinder.client;
 
+import fr.bloup.partyfinder.Partyfinder;
+import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
@@ -13,11 +15,14 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public final class PartyActions {
     private static final Component PREFIX = Component.literal("[PF] ").withStyle(ChatFormatting.DARK_AQUA);
     private static final int INVITE_ACCEPT_DELAY_TICKS = 20;
     private static final int COMMAND_SPACING_TICKS = 10;
+    private static final Pattern PARTY_COMMAND =
+            Pattern.compile("party (?:(?:invite|kick|transfer|accept) [A-Za-z0-9_]{1,16}|leave|disband|warp)");
 
     private static final List<Delayed> DELAYED = new ArrayList<>();
     private static Screen pendingScreen;
@@ -61,7 +66,16 @@ public final class PartyActions {
         if (mc.player != null) mc.gui.chatListener().handleSystemMessage(PREFIX.copy().append(message), false);
     }
 
+    /** Party commands only: anything else (from the network, a resource pack or a bug) is dropped. */
     public static void command(String command) {
+        if (!PARTY_COMMAND.matcher(command).matches()) {
+            Partyfinder.LOGGER.warn("Blocked non-party command \"{}\"", command);
+            return;
+        }
+        send(command);
+    }
+
+    private static void send(String command) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
         sendingOwn = true;
@@ -122,12 +136,24 @@ public final class PartyActions {
         }).orElse(false);
     }
 
-    /** Runs commands one after another, spaced out so the server does not drop them. */
-    public static void runCommands(List<String> commands) {
+    /**
+     * Activity launch commands, only ever run from the player's own click: travel commands only (warp, joininstance),
+     * spaced out so the server does not drop them.
+     */
+    public static void runLaunchCommands(List<String> commands) {
         int delay = 0;
         for (String command : commands) {
-            if (!command.matches("[A-Za-z0-9_ ]{1,64}")) continue;
-            DELAYED.add(new Delayed(Math.max(1, delay), () -> command(command)));
+            if (!Activities.isSafeCommand(command)) continue;
+            DELAYED.add(new Delayed(Math.max(1, delay), () -> send(command)));
+            delay += COMMAND_SPACING_TICKS;
+        }
+    }
+
+    /** Invites several players one after another. */
+    public static void inviteAll(List<String> names) {
+        int delay = 0;
+        for (String name : names) {
+            DELAYED.add(new Delayed(Math.max(1, delay), () -> partyCommand("invite", name)));
             delay += COMMAND_SPACING_TICKS;
         }
     }

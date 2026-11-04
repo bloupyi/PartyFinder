@@ -77,8 +77,8 @@ public final class PartyTransfer {
     }
 
     /** Backend relays an invite (request accepted or /p invite by the PF leader) to us, the current Hypixel leader. */
-    public static void onInviteMember(String name) {
-        if (PartySync.currentListing().isEmpty() || !HypixelBridge.isLeaderOrSolo()) return;
+    public static void onInviteMember(String listingId, String name) {
+        if (PartySync.currentListing().filter(l -> l.id().equals(listingId)).isEmpty() || !HypixelBridge.isLeaderOrSolo()) return;
         if (PartyActions.partyCommand("invite", name)) {
             PartyActions.chat(Component.translatable("partyfinder.chat.inviting_for", name).withStyle(ChatFormatting.YELLOW));
         }

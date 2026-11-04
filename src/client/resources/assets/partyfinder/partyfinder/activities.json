@@ -17,12 +17,6 @@
               "commands": [
                 "warp camp"
               ]
-            },
-            {
-              "id": "dwarven",
-              "commands": [
-                "warp mines"
-              ]
             }
           ]
         }
@@ -167,12 +161,6 @@
               "id": "crimson",
               "commands": [
                 "warp crimson"
-              ]
-            },
-            {
-              "id": "crystal_hollows",
-              "commands": [
-                "warp ch"
               ]
             }
           ]
@@ -882,12 +870,6 @@
               ]
             },
             {
-              "id": "jerry",
-              "commands": [
-                "warp jerry"
-              ]
-            },
-            {
               "id": "crystal_hollows",
               "commands": [
                 "warp ch"
@@ -908,31 +890,6 @@
       ],
       "events": [
         "spooky_festival"
-      ]
-    },
-    {
-      "id": "glacite_tunnels",
-      "category": "mining",
-      "icon": "minecraft:blue_ice",
-      "color": "#55FFFF",
-      "max_size": 5,
-      "launch": "all",
-      "options": [
-        {
-          "id": "mining_area",
-          "values": [
-            {
-              "id": "glacite",
-              "commands": [
-                "warp camp"
-              ]
-            }
-          ]
-        }
-      ],
-      "stats": [
-        "skill_mining",
-        "hotm"
       ]
     },
     {
@@ -967,6 +924,7 @@
       "color": "#FFAA00",
       "max_size": 4,
       "launch": "all",
+      "transfer": true,
       "options": [
         {
           "id": "mining_area",
@@ -1345,58 +1303,46 @@
       ]
     },
     {
-      "id": "bestiary",
-      "category": "grind",
-      "icon": "minecraft:book",
-      "color": "#FFFF55",
+      "id": "critter_safari",
+      "category": "hunting",
+      "icon": "minecraft:spyglass",
+      "color": "#55FF55",
       "max_size": 5,
-      "launch": "all",
+      "launch": "host",
       "options": [
         {
-          "id": "grind_area",
+          "id": "safari_ticket",
           "values": [
             {
-              "id": "hub",
+              "id": "basic",
               "commands": [
-                "warp hub"
+                "warp safari"
               ]
             },
             {
-              "id": "spider",
+              "id": "economy",
               "commands": [
-                "warp spider"
+                "warp safari"
               ]
             },
             {
-              "id": "end",
+              "id": "premium",
               "commands": [
-                "warp end"
+                "warp safari"
               ]
             },
             {
-              "id": "crimson",
+              "id": "first_class",
               "commands": [
-                "warp crimson"
-              ]
-            },
-            {
-              "id": "dwarven",
-              "commands": [
-                "warp mines"
-              ]
-            },
-            {
-              "id": "park",
-              "commands": [
-                "warp park"
+                "warp safari"
               ]
             }
           ]
         }
       ],
       "stats": [
-        "skill_combat",
-        "sb"
+        "skill_hunting",
+        "skill_foraging"
       ]
     },
     {

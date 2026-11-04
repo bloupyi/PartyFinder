@@ -2,7 +2,7 @@
 
 > Pre-alpha: expect bugs and breaking changes.
 
-Client-side Fabric mod (Minecraft 26.2) adding a party finder for Hypixel SkyBlock activities: mining (mineshafts, Crystal Hollows), fishing, slayers, dungeons, Kuudra and more.
+Client-side Fabric mod (Minecraft 26.2) adding a party finder for Hypixel SkyBlock activities: mining (mineshafts, Crystal Hollows), fishing, slayers, dungeons, Kuudra, Critter Safari and more.
 
 ## Usage
 
@@ -37,14 +37,13 @@ The mod connects to the PartyFinder server. The server is not part of this repos
 
 ## Resource packs
 
-Everything visual lives in `assets/partyfinder/` and can be overridden by a resource pack:
+Everything visual lives in `assets/partyfinder/` and can be overridden by a resource pack. [`resourcepack-template/`](resourcepack-template/README.md) is a complete, ready-to-edit pack with every overridable file (`./gradlew resourcePackTemplate` zips it into `build/resourcepack/`):
 
 | File | Purpose |
 | --- | --- |
-| `partyfinder/menu.json` | Category menu (chest GUI): texture, rows, filler item, and each slot's action/category/icon |
-| `partyfinder/activities.json` | Activity list: `id`, `category`, `icon` (item id), optional `sprite`, `color`, `max_size`, `options` (floor, tier, island... each value with its launch `commands`), `launch` (`host`, `all`, `none`), `stats` shown per member (`sb`, `cata`, `class`, `hotm`, `kuudra`, `skill_<skill>`, `slayer_<boss>`) |
+| `partyfinder/menu.json` | Category menu (chest GUI): texture, rows, filler item, open sound, and each slot's action/category/icon |
+| `partyfinder/activities.json` | Activity list: `id`, `category`, `icon` (item id), optional `sprite`, `color`, `max_size`, `options` (floor, tier, island... each value with its launch `commands`), `launch` (`host`, `all`, `none`), `stats` shown per member (`sb`, `cata`, `class`, `hotm`, `kuudra`, `skill_<skill>`, `slayer_<boss>`), `events` it is suggested for, `transfer` |
 | `partyfinder/theme.json` | Text colors (titles, owner, note, slots, status...) |
 | `textures/gui/sprites/listing/entry*.png` | Listing row backgrounds (nine-slice, see `.mcmeta`) |
-| `textures/gui/sprites/icon/party.png` | Menu button icon |
 | `textures/gui/sprites/hud/frame*.png` | Party HUD frames (nine-slice) |
 | `lang/*.json` | All texts, activity and category names |

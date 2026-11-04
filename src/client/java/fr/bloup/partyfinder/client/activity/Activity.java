@@ -44,9 +44,9 @@ public record Activity(
         return Component.translatable("partyfinder.option." + optionId + "." + valueId);
     }
 
-    /** Activity name followed by its main option, e.g. "Dungeons F7". */
+    /** Activity name followed by its main option, e.g. "Dungeons F7"; not when that option has a single value. */
     public Component title(Map<String, String> selected) {
-        if (options.isEmpty() || selected == null) return name();
+        if (options.isEmpty() || options.getFirst().values().size() < 2 || selected == null) return name();
         String value = selected.get(options.getFirst().id());
         if (value == null) return name();
         return name().copy().append(" ").append(optionName(options.getFirst().id(), value));

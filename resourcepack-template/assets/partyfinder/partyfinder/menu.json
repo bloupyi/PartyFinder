@@ -1,0 +1,124 @@
+{
+  "texture": "minecraft:textures/gui/container/generic_54.png",
+  "rows": 5,
+  "filler": "minecraft:black_stained_glass_pane",
+  "open_sound": {
+    "id": "minecraft:block.lever.click",
+    "volume": 0.5,
+    "pitch": 1
+  },
+  "slots": [
+    {
+      "slot": 10,
+      "action": "category",
+      "category": "mining",
+      "icon": "minecraft:diamond_pickaxe"
+    },
+    {
+      "slot": 11,
+      "action": "category",
+      "category": "fishing",
+      "icon": "minecraft:fishing_rod"
+    },
+    {
+      "slot": 12,
+      "action": "category",
+      "category": "slayer",
+      "icon": "minecraft:golden_sword"
+    },
+    {
+      "slot": 13,
+      "action": "category",
+      "category": "dungeons",
+      "icon": "minecraft:wither_skeleton_skull"
+    },
+    {
+      "slot": 14,
+      "action": "category",
+      "category": "kuudra",
+      "icon": "minecraft:magma_block"
+    },
+    {
+      "slot": 15,
+      "action": "category",
+      "category": "crimson",
+      "icon": "minecraft:blaze_powder"
+    },
+    {
+      "slot": 16,
+      "action": "category",
+      "category": "rift",
+      "icon": "minecraft:ender_eye"
+    },
+    {
+      "slot": 20,
+      "action": "category",
+      "category": "world_boss",
+      "icon": "minecraft:dragon_egg"
+    },
+    {
+      "slot": 21,
+      "action": "category",
+      "category": "grind",
+      "icon": "minecraft:iron_sword"
+    },
+    {
+      "slot": 22,
+      "action": "category",
+      "category": "hunting",
+      "icon": "minecraft:spyglass"
+    },
+    {
+      "slot": 23,
+      "action": "category",
+      "category": "social",
+      "icon": "minecraft:emerald"
+    },
+    {
+      "slot": 24,
+      "action": "category",
+      "category": "misc",
+      "icon": "minecraft:golden_shovel"
+    },
+    {
+      "slot": 31,
+      "action": "all",
+      "icon": "minecraft:compass"
+    },
+    {
+      "slot": 36,
+      "action": "moderation",
+      "icon": "minecraft:anvil"
+    },
+    {
+      "slot": 38,
+      "action": "history",
+      "icon": "minecraft:clock"
+    },
+    {
+      "slot": 39,
+      "action": "requests",
+      "icon": "minecraft:bell"
+    },
+    {
+      "slot": 40,
+      "action": "close",
+      "icon": "minecraft:barrier"
+    },
+    {
+      "slot": 41,
+      "action": "create",
+      "icon": "minecraft:writable_book"
+    },
+    {
+      "slot": 42,
+      "action": "settings",
+      "icon": "minecraft:repeater"
+    },
+    {
+      "slot": 44,
+      "action": "reconnect",
+      "icon": "minecraft:comparator"
+    }
+  ]
+}

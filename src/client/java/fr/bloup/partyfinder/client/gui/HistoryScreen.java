@@ -78,7 +78,7 @@ public class HistoryScreen extends Screen {
         String names = missing.stream().map(Listing.Player::name).collect(Collectors.joining(", "));
         minecraft.gui.setScreen(new ConfirmScreen(confirmed -> {
             if (confirmed) {
-                PartyActions.runCommands(missing.stream().map(p -> "party invite " + p.name()).toList());
+                PartyActions.inviteAll(missing.stream().map(Listing.Player::name).toList());
             }
             minecraft.gui.setScreen(this);
         }, Component.translatable("partyfinder.history.invite.confirm"), Component.literal(names)));

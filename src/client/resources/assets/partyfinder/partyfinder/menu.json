@@ -3,7 +3,7 @@
   "rows": 5,
   "filler": "minecraft:black_stained_glass_pane",
   "open_sound": {
-    "id": "minecraft:block.chest.open",
+    "id": "minecraft:block.lever.click",
     "volume": 0.5,
     "pitch": 1
   },
@@ -64,8 +64,9 @@
     },
     {
       "slot": 22,
-      "action": "all",
-      "icon": "minecraft:compass"
+      "action": "category",
+      "category": "hunting",
+      "icon": "minecraft:spyglass"
     },
     {
       "slot": 23,
@@ -78,6 +79,11 @@
       "action": "category",
       "category": "misc",
       "icon": "minecraft:golden_shovel"
+    },
+    {
+      "slot": 31,
+      "action": "all",
+      "icon": "minecraft:compass"
     },
     {
       "slot": 36,

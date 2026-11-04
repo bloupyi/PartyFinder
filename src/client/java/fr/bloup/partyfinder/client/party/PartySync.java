@@ -127,8 +127,9 @@ public final class PartySync {
     }
 
     /** Backend asks the Hypixel leader to kick a finder member who left through the mod (or disconnected for too long). */
-    public static void onKickMember(UUID uuid, String name) {
-        if (currentListing().isEmpty() || !HypixelBridge.inParty() || !HypixelBridge.isLeaderOrSolo()) return;
+    public static void onKickMember(String listingId, UUID uuid, String name) {
+        if (currentListing().filter(l -> l.id().equals(listingId)).isEmpty()) return;
+        if (!HypixelBridge.inParty() || !HypixelBridge.isLeaderOrSolo()) return;
         if (!HypixelBridge.members().contains(uuid)) return;
         if (PartyActions.partyCommand("kick", name)) {
             PartyActions.chat(Component.translatable("partyfinder.chat.member_left", name).withStyle(ChatFormatting.YELLOW));
@@ -161,7 +162,7 @@ public final class PartySync {
         Optional<Listing> listing = currentListing();
         if (listing.isEmpty() || !canLaunch(listing.get())) return false;
         Activity activity = Activities.get(listing.get().activity());
-        PartyActions.runCommands(activity.launchCommands(listing.get().options()));
+        PartyActions.runLaunchCommands(activity.launchCommands(listing.get().options()));
         return true;
     }
 

@@ -26,7 +26,8 @@ public final class Activities {
     private static final Identifier ACTIVITIES = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/activities.json");
     private static final Identifier THEME = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/theme.json");
 
-    private static final Pattern SAFE_COMMAND = Pattern.compile("[A-Za-z0-9_ ]{1,64}");
+    // Launch commands can come from any resource pack: only travel commands, never e.g. /coopadd or /p transfer.
+    private static final Pattern SAFE_COMMAND = Pattern.compile("warp [a-z0-9_]{1,32}|joininstance [A-Z0-9_]{1,48}");
     private static final Map<String, Activity> BY_ID = new LinkedHashMap<>();
     private static final List<String> CATEGORIES = new ArrayList<>();
     private static final Map<String, Integer> COLORS = new LinkedHashMap<>();
@@ -69,6 +70,10 @@ public final class Activities {
         return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5, List.of(), Activity.Launch.NONE, List.of("sb"), List.of(), false);
     }
 
+    public static boolean isSafeCommand(String command) {
+        return SAFE_COMMAND.matcher(command).matches();
+    }
+
     public static int color(String key, int fallback) {
         return 0xFF000000 | COLORS.getOrDefault(key, fallback);
     }
@@ -107,7 +112,7 @@ public final class Activities {
                         for (JsonElement c : value.getAsJsonArray("commands")) {
                             String command = c.getAsString().strip();
                             if (command.startsWith("/")) command = command.substring(1);
-                            if (SAFE_COMMAND.matcher(command).matches()) commands.add(command);
+                            if (isSafeCommand(command)) commands.add(command);
                             else Partyfinder.LOGGER.warn("Ignoring unsafe launch command \"{}\" in {}", command, id);
                         }
                     }
