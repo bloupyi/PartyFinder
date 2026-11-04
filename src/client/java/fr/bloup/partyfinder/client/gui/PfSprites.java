@@ -9,6 +9,7 @@ public final class PfSprites {
     public static final Identifier ENTRY_OWN = id("listing/entry_own");
     public static final Identifier HUD_FRAME = id("hud/frame");
     public static final Identifier HUD_FRAME_SELF = id("hud/frame_self");
+    public static final Identifier HUD_LEADER = id("hud/leader");
 
     private PfSprites() {
     }

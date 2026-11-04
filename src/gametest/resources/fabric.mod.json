@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "partyfinder-gametest",
+  "version": "1.0.0",
+  "name": "PartyFinder game tests",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "fr.bloup.partyfinder.gametest.HudScreenshots"
+    ]
+  },
+  "depends": {
+    "partyfinder": "*"
+  }
+}

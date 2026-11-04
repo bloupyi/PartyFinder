@@ -130,10 +130,18 @@ public record MemberStatus(
         return maxHealth > 0;
     }
 
-    /** Absorption as a share of max health: SkyBlock shows it as health above the max (gold), vanilla as hearts. */
+    /**
+     * Absorption as a share of max health. Clients from 0.6.0 sent SkyBlock absorption as health above the max
+     * instead of in this field.
+     */
     public float absorptionRatio() {
-        if (hasNumbers()) return Math.max(0, health - maxHealth) / (float) maxHealth;
-        return absorption;
+        if (absorption > 0 || !hasNumbers()) return absorption;
+        return Math.max(0, health - maxHealth) / (float) maxHealth;
+    }
+
+    /** Health as SkyBlock displays it: real health plus absorption. */
+    public int displayedHealth() {
+        return health > maxHealth ? health : health + Math.round(absorptionRatio() * maxHealth);
     }
 
     public static MemberStatus sanitize(MemberStatus raw) {

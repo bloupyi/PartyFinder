@@ -39,6 +39,10 @@ loom {
 			vmArg "-Dpartyfinder.backend=ws://localhost:8765"
 		}
 	}
+	// The client game test must never talk to the production backend.
+	runs.matching { it.name == "clientGameTest" }.configureEach {
+		vmArg "-Dpartyfinder.backend=ws://127.0.0.1:9"
+	}
 	splitEnvironmentSourceSets()
 
 	mods {
@@ -52,6 +56,14 @@ loom {
 fabricApi {
 	configureDataGeneration {
 		client = true
+	}
+	// ./gradlew runClientGameTest: opens the game and screenshots the party HUD in several setups (src/gametest).
+	configureTests {
+		createSourceSet = true
+		modId = "partyfinder-gametest"
+		eula = true
+		enableGameTests = false
+		enableClientGameTests = true
 	}
 }
 

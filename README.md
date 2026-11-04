@@ -46,4 +46,5 @@ Everything visual lives in `assets/partyfinder/` and can be overridden by a reso
 | `partyfinder/theme.json` | Text colors (titles, owner, note, slots, status...) |
 | `textures/gui/sprites/listing/entry*.png` | Listing row backgrounds (nine-slice, see `.mcmeta`) |
 | `textures/gui/sprites/hud/frame*.png` | Party HUD frames (nine-slice) |
+| `textures/gui/sprites/hud/leader.png` | Party HUD leader mark |
 | `lang/*.json` | All texts, activity and category names |

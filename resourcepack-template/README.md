@@ -32,7 +32,8 @@ assets/partyfinder/
     │   └── entry_own.png          your own listing
     └── hud/
         ├── frame.png              party HUD member frame
-        └── frame_self.png         your own frame
+        ├── frame_self.png         your own frame
+        └── leader.png             party leader mark before the name (8×8)
 ```
 
 ## `partyfinder/menu.json`
@@ -83,8 +84,8 @@ Names come from the lang files: `partyfinder.activity.<id>`, `partyfinder.catego
 
 ## Sprites
 
-All sprites are nine-slice (see each `.png.mcmeta`): the corners (`border` pixels) stay as drawn and the rest
-stretches. Row backgrounds use a 2 px border, HUD frames a 3 px border; HUD frames are tinted with the HUD
+The frames and row backgrounds are nine-slice (see each `.png.mcmeta`): the corners (`border` pixels) stay as
+drawn and the rest stretches; `hud/leader.png` is drawn as is, 8×8. Row backgrounds use a 2 px border, HUD frames a 3 px border; HUD frames are tinted with the HUD
 opacity setting, so draw them at full opacity. You can change the size and border in the `.mcmeta`.
 
 The slot hover highlight of the chest menu is the vanilla `minecraft:container/slot_highlight_back` /

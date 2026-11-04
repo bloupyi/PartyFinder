@@ -23,11 +23,12 @@ import java.util.regex.Pattern;
  * statuses received from the other members.
  */
 public final class PartyStatus {
-    // "1,234/1,500❤" (also "❤ 1,234/1,500"); above the max it is absorption, shown in gold.
-    private static final Pattern HEALTH = Pattern.compile("([\\d,]+)/([\\d,]+)\\s*❤|❤\\s*([\\d,]+)/([\\d,]+)");
-    private static final Pattern MANA = Pattern.compile("([\\d,]+)/([\\d,]+)\\s*✎");
+    // Hypixel draws its stat icons with private-use characters (health U+E010, defense U+E008, mana U+E003) and used
+    // ❤ ❈ ✎ before; the health shown includes absorption.
+    private static final Pattern HEALTH = Pattern.compile("([\\d,]+)/([\\d,]+)[❤\\uE010]");
+    private static final Pattern MANA = Pattern.compile("([\\d,]+)/([\\d,]+)[✎\\uE003]");
+    private static final Pattern DEFENSE = Pattern.compile("([\\d,]+)[❈\\uE008]");
     private static final Pattern FORMATTING = Pattern.compile("§.");
-    private static final Pattern DEFENSE = Pattern.compile("([\\d,]+)❈");
     private static final long SEND_INTERVAL_MS = 2_000;
     private static final long HEARTBEAT_MS = 15_000;
     private static final long ACTION_BAR_TTL_MS = 5_000;
@@ -84,16 +85,14 @@ public final class PartyStatus {
         return player.getAbilities().mayfly || tab != null && tab.dead();
     }
 
-    /** Action bar text, from the action bar packet (what Hypixel uses) or an overlay system message. */
     public static void onActionBar(Component message) {
-        // Legacy codes would glue to the numbers: "§61,734" (gold absorption) must not read as 61734.
+        // Legacy codes would glue to the numbers: "§64,047" (gold absorption) must not read as 64047.
         String text = FORMATTING.matcher(message.getString()).replaceAll("");
         boolean found = false;
         Matcher m = HEALTH.matcher(text);
         if (m.find()) {
-            boolean prefixed = m.group(1) == null;
-            health = parse(m.group(prefixed ? 3 : 1));
-            maxHealth = parse(m.group(prefixed ? 4 : 2));
+            health = parse(m.group(1));
+            maxHealth = parse(m.group(2));
             found = maxHealth > 0;
         }
         m = MANA.matcher(text);
@@ -118,17 +117,21 @@ public final class PartyStatus {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return null;
         boolean fresh = System.currentTimeMillis() - actionBarAt < ACTION_BAR_TTL_MS;
-        float max = Math.max(1f, player.getMaxHealth());
-        float ratio = fresh ? (float) health / maxHealth : player.getHealth() / max;
+        float vanillaMax = Math.max(1f, player.getMaxHealth());
+        float ratio = Math.clamp(player.getHealth() / vanillaMax, 0f, 1f);
+        // Hypixel keeps the vanilla health bar in step with the real health, and the action bar adds absorption on
+        // top of it: real health from the vanilla ratio (it also updates every tick), absorption is the rest.
+        int real = fresh ? Math.round(ratio * maxHealth) : 0;
+        int absorption = !fresh ? 0 : ratio >= 1f ? Math.max(0, health - maxHealth) : Math.max(0, health - real);
         return new MemberStatus(
                 player.getGameProfile().name(),
-                Math.clamp(ratio, 0f, 1f),
-                fresh ? health : 0,
+                ratio,
+                real,
                 fresh ? maxHealth : 0,
                 fresh ? mana : 0,
                 fresh ? maxMana : 0,
                 fresh ? defense : 0,
-                fresh ? 0 : player.getAbsorptionAmount() / max,
+                fresh ? (float) absorption / maxHealth : player.getAbsorptionAmount() / vanillaMax,
                 HypixelBridge.mode(),
                 HypixelBridge.map(),
                 MemberStatus.equipmentOf(player),

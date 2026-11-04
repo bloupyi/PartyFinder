@@ -41,11 +41,31 @@ public final class PartyHud implements HudElement {
     private static final int GEAR_SIZE = 12;
     /** Gear drawn on the health text line: small enough to fit that line without making the frame taller. */
     private static final int INLINE_GEAR_SIZE = 10;
+    private static final int LEADER_SIZE = 8;
 
     /** Everything one frame needs; entity is set when the member is loaded close enough to be read locally. */
     /** shared: status comes from the member's own client (mod installed), so its dead flag is authoritative. */
     public record Member(UUID uuid, String name, boolean leader, boolean self, MemberStatus status, LivingEntity entity,
                          float distance, List<Component> stats, boolean shared) {
+    }
+
+    /**
+     * Optional rows of one member's frame: a row only exists when that member has something to show in it (no empty
+     * stats line when the API has nothing, no mana bar when they do not share mana...), so frames differ in height.
+     */
+    record Rows(boolean mana, boolean info, boolean stats, boolean gear, boolean gearInline) {
+        static Rows of(Hud cfg, Member m) {
+            MemberStatus status = m.status();
+            boolean mana = cfg.showManaBar && status != null && status.maxMana() > 0;
+            boolean info = (cfg.healthText != PartyFinderConfig.HealthText.NONE || cfg.showDefense)
+                    && !infoParts(status, cfg, false).isEmpty();
+            boolean stats = cfg.showStats && !cfg.compact && !m.stats().isEmpty();
+            boolean gear = !shownGear(m, cfg).isEmpty();
+            // Gear goes at the end of the health text line when there is room for it there.
+            boolean inline = gear && info && status != null && Minecraft.getInstance().font.width(infoText(status, cfg))
+                    + 4 + shownGearWidth(m, cfg, INLINE_GEAR_SIZE) <= frameWidth(cfg) - portraitWidth(cfg) - 2 * PAD;
+            return new Rows(mana, info, stats, gear, inline);
+        }
     }
 
     public record Bounds(int x, int y, int width, int height) {
@@ -145,50 +165,26 @@ public final class PartyHud implements HudElement {
         };
     }
 
-    private static boolean infoRow(Hud cfg) {
-        return cfg.healthText != PartyFinderConfig.HealthText.NONE || cfg.showDefense;
-    }
-
-    private static int gearCount(Hud cfg) {
-        return (cfg.showArmor ? 4 : 0) + (cfg.showHeldItem ? 1 : 0);
-    }
-
-    private static int gearWidth(Hud cfg, int size) {
-        int count = gearCount(cfg);
-        return count == 0 ? 0 : count * (size + 1) - 1;
-    }
-
-    /**
-     * Gear goes at the end of the health text line when every frame has room for it there; only otherwise does it
-     * get a row of its own (which still costs nothing when the portrait is taller than the text).
-     */
-    static boolean gearInline(Hud cfg, List<Member> members) {
-        if (gearCount(cfg) == 0 || !infoRow(cfg)) return false;
-        Font font = Minecraft.getInstance().font;
-        int room = frameWidth(cfg) - portraitWidth(cfg) - 2 * PAD - gearWidth(cfg, INLINE_GEAR_SIZE) - 4;
-        for (Member m : members) {
-            if (font.width(infoText(m.status(), cfg)) > room) return false;
-        }
-        return true;
-    }
-
-    static int frameHeight(Hud cfg, boolean gearInline) {
+    /** Height of a frame; a gear row only when the gear does not fit on the health text line. */
+    static int frameHeight(Hud cfg, Rows rows) {
         Font font = Minecraft.getInstance().font;
         int h = font.lineHeight;
         if (cfg.showHealthBar) h += 2 + BAR_HEIGHT;
-        if (cfg.showManaBar) h += 1 + MANA_HEIGHT;
-        if (infoRow(cfg)) h += 2 + font.lineHeight;
-        if (cfg.showStats && !cfg.compact) h += 1 + font.lineHeight;
-        if (gearCount(cfg) > 0 && !gearInline) h += 2 + GEAR_SIZE;
+        if (rows.mana()) h += 1 + MANA_HEIGHT;
+        if (rows.info()) h += 2 + font.lineHeight;
+        if (rows.stats()) h += 1 + font.lineHeight;
+        if (rows.gear() && !rows.gearInline()) h += 2 + GEAR_SIZE;
         return Math.max(h, portraitHeight(cfg)) + 2 * PAD;
     }
 
-    public static Bounds bounds(Hud cfg, int count, boolean gearInline, int screenWidth, int screenHeight) {
+    public static Bounds bounds(Hud cfg, List<Integer> heights, int screenWidth, int screenHeight) {
         float scale = cfg.scale / 100f;
         int fw = frameWidth(cfg);
-        int fh = frameHeight(cfg, gearInline);
-        int w = cfg.layout == PartyFinderConfig.Layout.VERTICAL ? fw : count * fw + (count - 1) * cfg.spacing;
-        int h = cfg.layout == PartyFinderConfig.Layout.VERTICAL ? count * fh + (count - 1) * cfg.spacing : fh;
+        int count = heights.size();
+        boolean vertical = cfg.layout == PartyFinderConfig.Layout.VERTICAL;
+        int w = vertical ? fw : count * fw + (count - 1) * cfg.spacing;
+        int h = vertical ? heights.stream().mapToInt(Integer::intValue).sum() + (count - 1) * cfg.spacing
+                : heights.stream().mapToInt(Integer::intValue).max().orElse(0);
         int sw = Math.round(w * scale);
         int sh = Math.round(h * scale);
         int x = switch (cfg.anchor) {
@@ -204,22 +200,24 @@ public final class PartyHud implements HudElement {
     }
 
     static void render(GuiGraphicsExtractor g, List<Member> members, Hud cfg) {
-        boolean inline = gearInline(cfg, members);
-        Bounds bounds = bounds(cfg, members.size(), inline, g.guiWidth(), g.guiHeight());
+        List<Rows> rows = members.stream().map(m -> Rows.of(cfg, m)).toList();
+        List<Integer> heights = rows.stream().map(r -> frameHeight(cfg, r)).toList();
+        Bounds bounds = bounds(cfg, heights, g.guiWidth(), g.guiHeight());
         lastBounds = bounds;
         float scale = cfg.scale / 100f;
         int fw = frameWidth(cfg);
-        int fh = frameHeight(cfg, inline);
+        boolean vertical = cfg.layout == PartyFinderConfig.Layout.VERTICAL;
         List<Runnable> models = new ArrayList<>();
 
         g.pose().pushMatrix();
         g.pose().translate(bounds.x(), bounds.y());
         g.pose().scale(scale, scale);
+        int fy = 0;
         for (int i = 0; i < members.size(); i++) {
-            int fx = cfg.layout == PartyFinderConfig.Layout.VERTICAL ? 0 : i * (fw + cfg.spacing);
-            int fy = cfg.layout == PartyFinderConfig.Layout.VERTICAL ? i * (fh + cfg.spacing) : 0;
+            int fx = vertical ? 0 : i * (fw + cfg.spacing);
+            int fh = heights.get(i);
             Member member = members.get(i);
-            drawFrame(g, member, cfg, fx, fy, fw, fh, inline);
+            drawFrame(g, member, cfg, fx, fy, fw, fh, rows.get(i));
             if (cfg.portrait == PartyFinderConfig.Portrait.MODEL && !Portraits.isBroken(member.uuid())) {
                 int boxWidth = portraitWidth(cfg) - PAD;
                 int boxHeight = portraitHeight(cfg);
@@ -231,13 +229,14 @@ public final class PartyHud implements HudElement {
                 int y1 = Math.round(bounds.y() + (boxY + boxHeight) * scale);
                 models.add(() -> drawModel(g, member, cfg, x0, y0, x1, y1));
             }
+            if (vertical) fy += fh + cfg.spacing;
         }
         g.pose().popMatrix();
         // Entities are rendered in screen space, outside the scaled pose.
         models.forEach(Runnable::run);
     }
 
-    private static void drawFrame(GuiGraphicsExtractor g, Member m, Hud cfg, int x, int y, int w, int h, boolean gearInline) {
+    private static void drawFrame(GuiGraphicsExtractor g, Member m, Hud cfg, int x, int y, int w, int h, Rows rows) {
         Font font = Minecraft.getInstance().font;
         int alpha = Math.round(cfg.backgroundOpacity * 2.55f);
         if (alpha > 0) {
@@ -273,21 +272,24 @@ public final class PartyHud implements HudElement {
         int sideWidth = side.isEmpty() ? 0 : font.width(side);
         if (!side.isEmpty()) g.text(font, side, flip ? cx : right - sideWidth, cy, Activities.color("hud_info", 0xAAAAAA), shadow);
         if (cfg.showName) {
-            String prefix = cfg.showLeader && m.leader() ? "★ " : "";
+            // Leader mark as a sprite rather than a glyph: fonts (and server resource packs) do not all have one.
+            boolean leader = cfg.showLeader && m.leader();
+            int icon = leader ? LEADER_SIZE + 2 : 0;
             String tag = dungeon != null && dungeon.dungeonClass() != null
                     ? "[" + Character.toUpperCase(dungeon.dungeonClass().charAt(0)) + "] " : "";
             String suffix = dead ? " ☠" : "";
-            int room = right - sideWidth - 4 - cx - font.width(tag);
-            String name = clip(font, prefix + m.name() + suffix, room);
+            int room = right - sideWidth - 4 - cx - icon - font.width(tag);
+            String name = clip(font, m.name() + suffix, room);
             int color = dead ? Activities.color("hud_dead", 0x777777)
-                    : m.leader() && cfg.showLeader ? Activities.color("hud_leader", 0xFFAA00)
+                    : leader ? Activities.color("hud_leader", 0xFFAA00)
                     : m.self() ? Activities.color("hud_self", 0x55FFFF) : Activities.color("hud_name", 0xFFFFFF);
-            int width = font.width(tag) + font.width(name);
+            int width = icon + font.width(tag) + font.width(name);
             int nx = flip ? right - width : cx;
+            if (leader) g.blitSprite(RenderPipelines.GUI_TEXTURED, PfSprites.HUD_LEADER, nx, cy, LEADER_SIZE, LEADER_SIZE);
             if (!tag.isEmpty()) {
-                g.text(font, tag, nx, cy, Activities.color("class_" + dungeon.dungeonClass(), 0xFFFFFF), shadow);
+                g.text(font, tag, nx + icon, cy, Activities.color("class_" + dungeon.dungeonClass(), 0xFFFFFF), shadow);
             }
-            g.text(font, name, nx + font.width(tag), cy, color, shadow);
+            g.text(font, name, nx + icon + font.width(tag), cy, color, shadow);
         }
         cy += font.lineHeight;
 
@@ -301,43 +303,51 @@ public final class PartyHud implements HudElement {
             healthBar(g, cx, cy, right - cx, status == null && !dead ? 1 : ratio, absorption, color, flip);
             cy += BAR_HEIGHT;
         }
-        if (cfg.showManaBar) {
+        if (rows.mana()) {
             cy += 1;
-            boolean known = status != null && status.maxMana() > 0;
-            bar(g, cx, cy, right - cx, MANA_HEIGHT, known ? (float) status.mana() / status.maxMana() : 0,
-                    Activities.color("hud_mana", 0x5555FF), flip);
+            bar(g, cx, cy, right - cx, MANA_HEIGHT, (float) status.mana() / status.maxMana(), Activities.color("hud_mana", 0x5555FF), flip);
             cy += MANA_HEIGHT;
         }
-        if (infoRow(cfg)) {
+        if (rows.info()) {
             cy += 2;
-            int room = right - cx - (gearInline ? gearWidth(cfg, INLINE_GEAR_SIZE) + 4 : 0);
+            int room = right - cx - (rows.gearInline() ? shownGearWidth(m, cfg, INLINE_GEAR_SIZE) + 4 : 0);
             drawInfo(g, font, infoParts(status, cfg, absorption > 0), cx, right, room, cy, flip, shadow);
-            if (gearInline && status != null) {
+            if (rows.gearInline()) {
                 // Opposite end of the text: the right edge, or the left one when the frame is flipped.
-                int start = flip ? cx : right - gearWidth(cfg, INLINE_GEAR_SIZE);
+                int start = flip ? cx : right - shownGearWidth(m, cfg, INLINE_GEAR_SIZE);
                 drawGear(g, m, cfg, start, cy - 1, INLINE_GEAR_SIZE);
             }
             cy += font.lineHeight;
         }
-        if (cfg.showStats && !cfg.compact) {
+        if (rows.stats()) {
             cy += 1;
             String stats = String.join(" · ", m.stats().stream().map(Component::getString).toList());
             stats = clip(font, stats, right - cx);
             if (!stats.isEmpty()) g.text(font, stats, flip ? right - font.width(stats) : cx, cy, Activities.color("stat", 0x55FFFF), shadow);
             cy += font.lineHeight;
         }
-        if (gearCount(cfg) > 0 && !gearInline && status != null) {
+        if (rows.gear() && !rows.gearInline()) {
             cy += 2;
-            drawGear(g, m, cfg, flip ? right - gearWidth(cfg, GEAR_SIZE) : cx, cy, GEAR_SIZE);
+            drawGear(g, m, cfg, flip ? right - shownGearWidth(m, cfg, GEAR_SIZE) : cx, cy, GEAR_SIZE);
         }
+    }
+
+    private static int shownGearWidth(Member m, Hud cfg, int size) {
+        int count = shownGear(m, cfg).size();
+        return count == 0 ? 0 : count * (size + 1) - 1;
+    }
+
+    private static List<MemberStatus.Gear> shownGear(Member m, Hud cfg) {
+        if (m.status() == null) return List.of();
+        return m.status().equipment().stream()
+                .filter(gear -> "mainhand".equals(gear.slot()) ? cfg.showHeldItem : cfg.showArmor)
+                .toList();
     }
 
     /** Draws the shown gear left to right from x, in slot order (helmet to boots, then held item). */
     private static void drawGear(GuiGraphicsExtractor g, Member m, Hud cfg, int x, int y, int size) {
         int gx = x;
-        for (MemberStatus.Gear gear : m.status().equipment()) {
-            boolean held = "mainhand".equals(gear.slot());
-            if (held ? !cfg.showHeldItem : !cfg.showArmor) continue;
+        for (MemberStatus.Gear gear : shownGear(m, cfg)) {
             g.pose().pushMatrix();
             g.pose().translate(gx, y);
             g.pose().scale(size / 16f, size / 16f);
@@ -392,7 +402,8 @@ public final class PartyHud implements HudElement {
         List<InfoPart> parts = new ArrayList<>();
         int percent = Math.round((status.healthRatio() + status.absorptionRatio()) * 100);
         String health = switch (cfg.healthText) {
-            case NUMBERS -> status.hasNumbers() ? compact(status.health()) + "/" + compact(status.maxHealth()) + "❤" : percent + "%❤";
+            case NUMBERS -> status.hasNumbers()
+                    ? compact(status.displayedHealth()) + "/" + compact(status.maxHealth()) + "❤" : percent + "%❤";
             case PERCENT -> percent + "%❤";
             case NONE -> null;
         };
