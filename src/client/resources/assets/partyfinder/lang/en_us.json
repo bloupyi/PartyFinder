@@ -297,7 +297,7 @@
   "partyfinder.settings.option.section.party": "Party",
   "partyfinder.settings.option.section.interface": "Interface",
   "partyfinder.settings.option.auto_accept_invites": "Auto-accept invites",
-  "partyfinder.settings.option.auto_accept_invites.tooltip": "Accept the party invite automatically when a leader accepts your join request.",
+  "partyfinder.settings.option.auto_accept_invites.tooltip": "Accepts the party invite as soon as it arrives when a leader accepts your join request through the finder. Other invites are never accepted.",
   "partyfinder.settings.option.notify_join_requests": "Join request alerts",
   "partyfinder.settings.option.notify_join_requests.tooltip": "Toast and chat message when someone asks to join your party.",
   "partyfinder.settings.option.notify_party_full": "Party full alert",

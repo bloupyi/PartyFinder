@@ -297,7 +297,7 @@
   "partyfinder.settings.option.section.party": "Party",
   "partyfinder.settings.option.section.interface": "Interface",
   "partyfinder.settings.option.auto_accept_invites": "Accepter les invitations",
-  "partyfinder.settings.option.auto_accept_invites.tooltip": "Accepte automatiquement l'invitation quand un chef accepte ta demande.",
+  "partyfinder.settings.option.auto_accept_invites.tooltip": "Accepte l'invitation dès qu'elle arrive quand un chef accepte ta demande via le finder. Les autres invitations ne sont jamais acceptées.",
   "partyfinder.settings.option.notify_join_requests": "Alertes de demandes",
   "partyfinder.settings.option.notify_join_requests.tooltip": "Toast et message chat quand quelqu'un demande à rejoindre ta party.",
   "partyfinder.settings.option.notify_party_full": "Alerte party complète",

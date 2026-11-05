@@ -25,7 +25,6 @@ import java.util.regex.Pattern;
  */
 public final class PartyActions {
     private static final Component PREFIX = Component.literal("[PF] ").withStyle(ChatFormatting.DARK_AQUA);
-    private static final int INVITE_ACCEPT_DELAY_TICKS = 20;
     private static final int COMMAND_SPACING_TICKS = 10;
     private static final Pattern PARTY_COMMAND =
             Pattern.compile("party (?:(?:invite|kick|transfer|accept) [A-Za-z0-9_]{1,16}|leave|disband|warp)");
@@ -169,8 +168,4 @@ public final class PartyActions {
         }
     }
 
-    public static void acceptInviteLater(String owner) {
-        if (!Listing.isValidName(owner)) return;
-        DELAYED.add(new Delayed(INVITE_ACCEPT_DELAY_TICKS, () -> partyCommand("accept", owner)));
-    }
 }

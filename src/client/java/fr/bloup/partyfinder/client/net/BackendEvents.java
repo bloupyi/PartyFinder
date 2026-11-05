@@ -3,6 +3,7 @@ package fr.bloup.partyfinder.client.net;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.PartyfinderClient;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
+import fr.bloup.partyfinder.client.party.InviteAccept;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.activity.Activities;
@@ -64,7 +65,7 @@ public final class BackendEvents {
         PartySync.onJoinAccepted(listingId);
         PartyActions.chat(Component.translatable("partyfinder.chat.join_accepted", owner.name()).withStyle(ChatFormatting.GREEN));
         if (PartyFinderConfig.get().autoAcceptInvites) {
-            PartyActions.acceptInviteLater(Listing.isValidName(inviter) ? inviter : owner.name());
+            InviteAccept.expect(Listing.isValidName(inviter) ? inviter : owner.name(), owner.name());
         }
     }
 

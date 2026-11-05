@@ -8,6 +8,7 @@ import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.hud.PartyHud;
 import fr.bloup.partyfinder.client.party.EventAlerts;
+import fr.bloup.partyfinder.client.party.InviteAccept;
 import fr.bloup.partyfinder.client.party.LiveStats;
 import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.PartySync;
@@ -54,6 +55,7 @@ public class PartyfinderClient implements ClientModInitializer {
             PartyTransfer.tick();
             PartyStatus.tick();
             LiveStats.tick();
+            InviteAccept.tick();
             EventAlerts.tick();
             BackendConnection.checkPublishTimeout();
             while (acceptKey.consumeClick()) {
@@ -78,6 +80,7 @@ public class PartyfinderClient implements ClientModInitializer {
             PartyTransfer.reset();
             PartyStatus.reset();
             LiveStats.reset();
+            InviteAccept.reset();
             PartyHud.reset();
         });
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
@@ -86,6 +89,7 @@ public class PartyfinderClient implements ClientModInitializer {
                 HypixelBridge.onChat(message);
                 PartyStatus.onChat(message);
                 LiveStats.onChat(message);
+                InviteAccept.onChat(message);
             }
         });
         ClientSendMessageEvents.ALLOW_COMMAND.register(PartyTransfer::allowCommand);
