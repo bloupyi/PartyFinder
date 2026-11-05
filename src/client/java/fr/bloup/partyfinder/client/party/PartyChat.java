@@ -30,17 +30,16 @@ import java.util.regex.Pattern;
  * (ChatComponentMixin). The "cleanPartyChat" setting turns all of this off.
  */
 public final class PartyChat {
-    private static final String RANK = "(?:\\[[^\\]]+\\] )?";
-    private static final String NAME = "([A-Za-z0-9_]{1,16})";
-    private static final Pattern FORMATTING = Pattern.compile("§.", Pattern.DOTALL);
-    private static final Pattern JOINED = Pattern.compile("(?m)^" + RANK + NAME + " joined the party\\.$");
-    private static final Pattern LEFT = Pattern.compile("(?m)^" + RANK + NAME + " has left the party\\.$");
-    private static final Pattern REMOVED = Pattern.compile("(?m)^" + RANK + NAME + " has been removed from the party\\.$");
+    // "[MVP+] Name": the whole part (kept with Hypixel's colors), then the name alone.
+    private static final String PLAYER = "((?:\\[[^\\]]+\\] )?([A-Za-z0-9_]{1,16}))";
+    private static final Pattern JOINED = Pattern.compile("(?m)^" + PLAYER + " joined the party\\.$");
+    private static final Pattern LEFT = Pattern.compile("(?m)^" + PLAYER + " has left the party\\.$");
+    private static final Pattern REMOVED = Pattern.compile("(?m)^" + PLAYER + " has been removed from the party\\.$");
     private static final Pattern INVITED = Pattern.compile(
-            "(?m)^" + RANK + NAME + " invited " + RANK + NAME + " to the party! They have 60 seconds to accept\\.$");
-    private static final Pattern EXPIRED = Pattern.compile("(?m)^The party invite to " + RANK + NAME + " has expired$");
+            "(?m)^" + PLAYER + " invited " + PLAYER + " to the party! They have 60 seconds to accept\\.$");
+    private static final Pattern EXPIRED = Pattern.compile("(?m)^The party invite to " + PLAYER + " has expired$");
     private static final Pattern TRANSFERRED = Pattern.compile(
-            "(?m)^The party was transferred to " + RANK + NAME + " by " + RANK + NAME + "$");
+            "(?m)^The party was transferred to " + PLAYER + " by " + PLAYER + "$");
     private static final long EXPECT_MS = 15_000;
     private static final long STATS_WAIT_MS = 3_000;
 
@@ -52,7 +51,8 @@ public final class PartyChat {
     private static final Map<String, PartyFinderState.JoinRequest> ACCEPTED = new HashMap<>();
     private static final List<PendingJoin> JOINS = new ArrayList<>();
 
-    private record PendingJoin(String name, long since) {
+    /** styled: "[MVP++] Name" as Hypixel colored it, used when the server knows no rank for the player. */
+    private record PendingJoin(String name, Component styled, long since) {
     }
 
     private PartyChat() {
@@ -83,51 +83,52 @@ public final class PartyChat {
     /** Every incoming game chat message (not the action bar). */
     public static void onChat(Component message) {
         if (!enabled()) return;
-        String text = FORMATTING.matcher(message.getString()).replaceAll("");
+        StyledText styled = StyledText.of(message);
+        String text = styled.plain();
         if (!text.contains("party") && !text.contains("Party")) return;
         Optional<Listing> listing = PartySync.currentListing();
         if (listing.isEmpty()) return;
 
         Matcher m = INVITED.matcher(text);
         if (m.find()) {
-            String inviter = m.group(1);
-            String invited = m.group(2);
+            String invited = m.group(4);
             hide(message);
             Long until = EXPECTED_INVITES.remove(invited.toLowerCase(Locale.ROOT));
             // Our own invite of an accepted player: our "Inviting..." line already said it.
             if (until != null && until >= System.currentTimeMillis()) return;
-            line(Component.translatable("partyfinder.party.invited", name(listing.get(), inviter), name(listing.get(), invited)), "chat_notice");
+            line(Component.translatable("partyfinder.party.invited", name(listing.get(), styled, m, 1), name(listing.get(), styled, m, 3)),
+                    "chat_notice");
             return;
         }
         m = JOINED.matcher(text);
         if (m.find()) {
             hide(message);
-            JOINS.add(new PendingJoin(m.group(1), System.currentTimeMillis()));
+            JOINS.add(new PendingJoin(m.group(2), styled.slice(m.start(1), m.end(1)), System.currentTimeMillis()));
             tick();
             return;
         }
         m = LEFT.matcher(text);
         if (m.find()) {
             hide(message);
-            line(Component.translatable("partyfinder.party.left", name(listing.get(), m.group(1))), "chat_notice");
+            line(Component.translatable("partyfinder.party.left", name(listing.get(), styled, m, 1)), "chat_notice");
             return;
         }
         m = REMOVED.matcher(text);
         if (m.find()) {
             hide(message);
-            line(Component.translatable("partyfinder.party.removed", name(listing.get(), m.group(1))), "chat_notice");
+            line(Component.translatable("partyfinder.party.removed", name(listing.get(), styled, m, 1)), "chat_notice");
             return;
         }
         m = EXPIRED.matcher(text);
         if (m.find()) {
             hide(message);
-            line(Component.translatable("partyfinder.party.expired", name(listing.get(), m.group(1))), "chat_muted");
+            line(Component.translatable("partyfinder.party.expired", name(listing.get(), styled, m, 1)), "chat_muted");
             return;
         }
         m = TRANSFERRED.matcher(text);
         if (m.find()) {
             hide(message);
-            line(Component.translatable("partyfinder.party.transferred", name(listing.get(), m.group(1))), "chat_notice");
+            line(Component.translatable("partyfinder.party.transferred", name(listing.get(), styled, m, 1)), "chat_notice");
         }
     }
 
@@ -147,13 +148,14 @@ public final class PartyChat {
             ACCEPTED.remove(join.name().toLowerCase(Locale.ROOT));
             Rank rank = request != null ? request.rank() : member != null ? member.rank() : null;
             String role = request != null ? request.role() : member != null ? member.role() : null;
-            announceJoin(listing.orElse(null), join.name(), rank, stats, request, role);
+            Component shown = rank != null || join.styled() == null ? Rank.name(rank, join.name()) : join.styled();
+            announceJoin(listing.orElse(null), join.name(), shown, rank, stats, request, role);
         }
     }
 
-    private static void announceJoin(Listing listing, String name, Rank rank, JsonObject stats, PartyFinderState.JoinRequest request,
-                                     String role) {
-        MutableComponent line = Component.translatable("partyfinder.party.joined", Rank.name(rank, name))
+    private static void announceJoin(Listing listing, String name, Component shown, Rank rank, JsonObject stats,
+                                     PartyFinderState.JoinRequest request, String role) {
+        MutableComponent line = Component.translatable("partyfinder.party.joined", shown)
                 .withColor(Theme.rgb("chat_notice"));
         if (listing != null) {
             Activity activity = Activities.get(listing.activity());
@@ -171,8 +173,14 @@ public final class PartyChat {
         return listing.members().stream().filter(m -> m.name() != null && m.name().equalsIgnoreCase(name)).findFirst();
     }
 
-    /** "[MVP+] Name" when the player is a known member, else the plain name. */
-    private static Component name(Listing listing, String name) {
+    /**
+     * The "[MVP+] Name" part of Hypixel's message with its own colors; when it has none, the rank the server knows for
+     * a member, else the plain name.
+     */
+    private static Component name(Listing listing, StyledText styled, Matcher m, int group) {
+        Component original = styled.slice(m.start(group), m.end(group));
+        if (original != null) return original;
+        String name = m.group(group + 1);
         return Rank.name(member(listing, name).map(Listing.Member::rank).orElse(null), name);
     }
 

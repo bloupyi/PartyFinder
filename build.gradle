@@ -223,7 +223,9 @@ tasks.register("checkBackendActivities") {
 }
 
 tasks.named("check") {
-	dependsOn "checkResourcePackTemplate", "checkOutboundPackets", "checkBackendActivities"
+	dependsOn "checkResourcePackTemplate", "checkOutboundPackets"
+	// The public copy of the mod has no backend/.
+	if (file("backend").isDirectory()) dependsOn "checkBackendActivities"
 }
 
 tasks.register("resourcePackTemplate", Zip) {
