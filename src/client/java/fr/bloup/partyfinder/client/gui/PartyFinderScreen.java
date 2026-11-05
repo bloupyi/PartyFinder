@@ -3,6 +3,7 @@ package fr.bloup.partyfinder.client.gui;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.Activity;
+import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
@@ -78,7 +79,7 @@ public class PartyFinderScreen extends Screen {
         addRenderableWidget(searchBox);
 
         list = addRenderableWidget(new ListingList(minecraft, width, height - LIST_TOP - FOOTER_HEIGHT, LIST_TOP,
-                this::join, this::updateButtons));
+                PartyFinderScreen::join, this::updateButtons));
 
         int row1 = height - FOOTER_HEIGHT + 6;
         int row2 = row1 + 24;
@@ -129,18 +130,7 @@ public class PartyFinderScreen extends Screen {
     private void refresh() {
         if (list == null) return;
         shownRevision = PartyFinderState.revision();
-        String query = search.toLowerCase(Locale.ROOT);
-        List<Listing> filtered = PartyFinderState.listings().stream().filter(l -> {
-            Activity activity = Activities.get(l.activity());
-            if (!category.isEmpty() && !activity.category().equals(category)) return false;
-            if (!activities.isEmpty() && !activities.contains(activity.id())) return false;
-            if (query.isEmpty()) return true;
-            return activity.name().getString().toLowerCase(Locale.ROOT).contains(query)
-                    || l.owner().name().toLowerCase(Locale.ROOT).contains(query)
-                    || l.note().toLowerCase(Locale.ROOT).contains(query)
-                    || l.requirements().toLowerCase(Locale.ROOT).contains(query);
-        }).toList();
-        list.setListings(filtered);
+        list.setListings(filter(category, activities, search));
         updateButtons();
     }
 
@@ -166,7 +156,35 @@ public class PartyFinderScreen extends Screen {
         requestsButton.setMessage(Component.translatable("partyfinder.screen.requests", requests));
     }
 
-    private void join(Listing listing) {
+    /** The listing screen in the style picked in the settings. */
+    public static Screen open(Screen parent, String category) {
+        return open(parent, category, Set.of(), category.isEmpty()
+                ? Component.translatable("partyfinder.category.all")
+                : Component.translatable("partyfinder.category." + category));
+    }
+
+    public static Screen open(Screen parent, String category, Set<String> activities, Component title) {
+        return PartyFinderConfig.get().listingStyle == PartyFinderConfig.ListingStyle.CHEST
+                ? new ChestListingScreen(parent, category, activities, title)
+                : new PartyFinderScreen(parent, category, activities, title);
+    }
+
+    /** Listings of this screen's category, activities and search, in display order. */
+    static List<Listing> filter(String category, Set<String> activities, String search) {
+        String query = search.toLowerCase(Locale.ROOT);
+        return PartyFinderState.listings().stream().filter(l -> {
+            Activity activity = Activities.get(l.activity());
+            if (!category.isEmpty() && !activity.category().equals(category)) return false;
+            if (!activities.isEmpty() && !activities.contains(activity.id())) return false;
+            if (query.isEmpty()) return true;
+            return activity.name().getString().toLowerCase(Locale.ROOT).contains(query)
+                    || l.owner().name().toLowerCase(Locale.ROOT).contains(query)
+                    || l.note().toLowerCase(Locale.ROOT).contains(query)
+                    || l.requirements().toLowerCase(Locale.ROOT).contains(query);
+        }).toList();
+    }
+
+    static void join(Listing listing) {
         if (listing == null || !BackendConnection.isConnected() || listing.isFull()) return;
         if (!listing.accepts(PartyFinderState.selfReports())) return;
         if (PartyFinderState.self().map(s -> s.uuid().equals(listing.owner().uuid())).orElse(false)) return;

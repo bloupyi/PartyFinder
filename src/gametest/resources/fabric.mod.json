@@ -7,7 +7,8 @@
   "entrypoints": {
     "fabric-client-gametest": [
       "fr.bloup.partyfinder.gametest.HudScreenshots",
-      "fr.bloup.partyfinder.gametest.ListingRefreshTest"
+      "fr.bloup.partyfinder.gametest.ListingRefreshTest",
+      "fr.bloup.partyfinder.gametest.ChestListingTest"
     ]
   },
   "depends": {

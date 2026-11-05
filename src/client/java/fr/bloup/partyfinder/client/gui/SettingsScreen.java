@@ -42,6 +42,7 @@ public class SettingsScreen extends OptionsSubScreen {
 
         list.addHeader(Component.translatable(KEY + "section.interface"));
         list.addSmall(List.of(
+                W.choice("listing_style", PartyFinderConfig.ListingStyle.values(), c.listingStyle, v -> c.listingStyle = v),
                 Button.builder(Component.translatable(KEY + "party_hud"), b -> minecraft.gui.setScreen(new HudConfigScreen(this)))
                         .width(OptionWidgets.WIDTH).build()));
     }

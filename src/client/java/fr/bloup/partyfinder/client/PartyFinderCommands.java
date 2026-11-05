@@ -84,7 +84,7 @@ public final class PartyFinderCommands {
                                 ctx.getSource().sendError(Component.translatable("partyfinder.error.unknown_event"));
                                 return 0;
                             }
-                            PartyActions.openNextTick(new PartyFinderScreen(new CategoryMenuScreen(null), "", ids, EventAlerts.name(event)));
+                            PartyActions.openNextTick(PartyFinderScreen.open(new CategoryMenuScreen(null), "", ids, EventAlerts.name(event)));
                             return 1;
                         })))
                 .then(literal("go").executes(ctx -> {

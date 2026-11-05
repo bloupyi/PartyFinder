@@ -144,33 +144,39 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
                 g.text(font, req, line3X, line3, Activities.color("requirements", 0xFFAA00));
             }
 
-            if (hovered) {
-                List<Component> tooltip = new ArrayList<>();
-                tooltip.add(fullTitle.copy().withColor(activity.color()));
-                tooltip.add(Component.literal(listing.owner().name()).withColor(0xAAAAAA));
-                tooltip.add(Component.literal(note));
-                if (!listing.requirements().isEmpty()) tooltip.add(Component.literal(listing.requirements()).withColor(0xFFAA00));
-                if (listing.hasReportLimit()) {
-                    tooltip.add(Component.translatable("partyfinder.listing.max_reports.tooltip", listing.maxReports()).withColor(0xAAAAAA));
-                }
-                if (!listing.minStats().isEmpty()) {
-                    tooltip.add(Component.translatable("partyfinder.listing.min_stats", listing.minStats().entrySet().stream()
-                            .map(e -> StatFormat.requirement(e.getKey(), e.getValue()).getString())
-                            .collect(Collectors.joining(", "))).withColor(0xFFAA00));
-                }
-                List<String> open = openRoles(listing);
-                if (!listing.roles().isEmpty()) {
-                    tooltip.add(open.isEmpty()
-                            ? Component.translatable("partyfinder.listing.roles.filled").withColor(0x55FF55)
-                            : Component.translatable("partyfinder.listing.roles.open", classNames(open)).withColor(0x55FFFF));
-                }
-                tooltip.addAll(reports.describe());
-                tooltip.add(Component.empty());
-                tooltip.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withColor(0xFFFFFF));
-                for (Listing.Member member : listing.members()) tooltip.add(memberLine(listing, activity, member));
-                g.setComponentTooltipForNextFrame(font, tooltip, mouseX, mouseY);
-            }
+            if (hovered) g.setComponentTooltipForNextFrame(font, tooltip(listing), mouseX, mouseY);
         }
+    }
+
+    /** Full description of a listing (the lore), shared by the list and the chest style. */
+    static List<Component> tooltip(Listing listing) {
+        Activity activity = Activities.get(listing.activity());
+        ReportSummary reports = listing.ownerReports();
+        String note = listing.note().isEmpty() ? Component.translatable("partyfinder.listing.no_note").getString() : listing.note();
+        List<Component> tooltip = new ArrayList<>();
+        tooltip.add(activity.title(listing.options()).copy().withColor(activity.color()));
+        tooltip.add(Component.literal(listing.owner().name()).withColor(0xAAAAAA));
+        tooltip.add(Component.literal(note));
+        if (!listing.requirements().isEmpty()) tooltip.add(Component.literal(listing.requirements()).withColor(0xFFAA00));
+        if (listing.hasReportLimit()) {
+            tooltip.add(Component.translatable("partyfinder.listing.max_reports.tooltip", listing.maxReports()).withColor(0xAAAAAA));
+        }
+        if (!listing.minStats().isEmpty()) {
+            tooltip.add(Component.translatable("partyfinder.listing.min_stats", listing.minStats().entrySet().stream()
+                    .map(e -> StatFormat.requirement(e.getKey(), e.getValue()).getString())
+                    .collect(Collectors.joining(", "))).withColor(0xFFAA00));
+        }
+        List<String> open = openRoles(listing);
+        if (!listing.roles().isEmpty()) {
+            tooltip.add(open.isEmpty()
+                    ? Component.translatable("partyfinder.listing.roles.filled").withColor(0x55FF55)
+                    : Component.translatable("partyfinder.listing.roles.open", classNames(open)).withColor(0x55FFFF));
+        }
+        tooltip.addAll(reports.describe());
+        tooltip.add(Component.empty());
+        tooltip.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withColor(0xFFFFFF));
+        for (Listing.Member member : listing.members()) tooltip.add(memberLine(listing, activity, member));
+        return tooltip;
     }
 
     /** Wanted dungeon roles not yet covered by a member's selected class. */

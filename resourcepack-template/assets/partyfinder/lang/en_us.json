@@ -474,5 +474,16 @@
   "partyfinder.chat.command_blocked": "In a PartyFinder party, only the PartyFinder leader can invite, transfer, kick or disband. Use /pf warp to warp.",
   "partyfinder.create.activity.pick": "Choose an activity",
   "partyfinder.create.activity.search": "Search an activity...",
-  "partyfinder.create.activity.none": "No matching activity."
+  "partyfinder.create.activity.none": "No matching activity.",
+  "partyfinder.settings.option.listing_style": "Listing style",
+  "partyfinder.settings.option.listing_style.tooltip": "How party listings are shown: a scrolling list with search, or a chest like Hypixel's Party Finder (one head per party, details on hover).",
+  "partyfinder.settings.option.listing_style.list": "List",
+  "partyfinder.settings.option.listing_style.chest": "Hypixel chest",
+  "partyfinder.chest.click_join": "Click to join!",
+  "partyfinder.chest.click_edit": "Click to edit your listing",
+  "partyfinder.chest.right_click_report": "Right-click to report",
+  "partyfinder.chest.full": "This party is full",
+  "partyfinder.chest.previous": "Previous page",
+  "partyfinder.chest.next": "Next page",
+  "partyfinder.chest.page": "Page %s/%s"
 }

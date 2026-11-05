@@ -211,8 +211,8 @@ public class CategoryMenuScreen extends Screen {
         if (slot == null) return super.mouseClicked(event, doubleClick);
         AbstractWidget.playButtonClickSound(minecraft.getSoundManager());
         switch (slot.action()) {
-            case CATEGORY -> minecraft.gui.setScreen(new PartyFinderScreen(this, slot.category()));
-            case ALL -> minecraft.gui.setScreen(new PartyFinderScreen(this, ""));
+            case CATEGORY -> minecraft.gui.setScreen(PartyFinderScreen.open(this, slot.category()));
+            case ALL -> minecraft.gui.setScreen(PartyFinderScreen.open(this, ""));
             case CREATE -> {
                 if (BackendConnection.isConnected()) minecraft.gui.setScreen(new CreateListingScreen(this));
             }

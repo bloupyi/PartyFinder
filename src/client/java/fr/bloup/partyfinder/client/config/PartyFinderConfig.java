@@ -24,7 +24,11 @@ public class PartyFinderConfig {
     public boolean notifyPartyFull = true;
     public Map<String, Boolean> eventAlerts = new LinkedHashMap<>();
     public int eventLeadMinutes = 5;
+    public ListingStyle listingStyle = ListingStyle.LIST;
     public Hud hud = new Hud();
+
+    /** LIST: scrolling rows with a search box; CHEST: Hypixel Party Finder style chest with one head per party. */
+    public enum ListingStyle { LIST, CHEST }
 
     public enum Anchor { TOP_LEFT, TOP_RIGHT, CENTER_LEFT, CENTER_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
 

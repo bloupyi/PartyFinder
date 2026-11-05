@@ -90,6 +90,7 @@ public class PartyfinderClient implements ClientModInitializer {
                 PartyStatus.onChat(message);
                 LiveStats.onChat(message);
                 InviteAccept.onChat(message);
+                PartyTransfer.onChat(message);
             }
         });
         ClientSendMessageEvents.ALLOW_COMMAND.register(PartyTransfer::allowCommand);

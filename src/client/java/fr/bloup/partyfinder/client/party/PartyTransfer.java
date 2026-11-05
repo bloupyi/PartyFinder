@@ -4,6 +4,7 @@ import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 import java.util.Arrays;
@@ -11,6 +12,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Automatic party transfers (/pf warp) for activities where whoever found the spot must warp the party (mineshafts),
@@ -19,6 +22,13 @@ import java.util.Set;
 public final class PartyTransfer {
     private static final long WARP_TIMEOUT_MS = 15_000;
     private static final int WARP_DELAY_TICKS = 10;
+    // Right after Hypixel's transfer message: just enough spacing for Hypixel to take the next command.
+    private static final int CHAT_WARP_DELAY_TICKS = 4;
+    // "The party was transferred to [MVP+] Name by [VIP] Leader" (or "... because Leader left"). Anchored per line: a
+    // player typing this shows as "Name: ...", which does not match.
+    private static final Pattern TRANSFERRED = Pattern.compile(
+            "(?m)^The party was transferred to (?:\\[[^\\]]+\\] )?([A-Za-z0-9_]{1,16})\\b");
+    private static final Pattern FORMATTING = Pattern.compile("§.", Pattern.DOTALL);
     private static final Set<String> ROOTS = Set.of("p", "party");
     private static final Set<String> SUBCOMMANDS = Set.of("accept", "allinvite", "chat", "challenge", "demote", "disband", "help",
             "hijack", "invite", "join", "kick", "kickoffline", "leave", "list", "mute", "poll", "private", "promote", "settings",
@@ -48,6 +58,23 @@ public final class PartyTransfer {
         HypixelBridge.requestRefresh(2_000);
         PartyActions.chat(Component.translatable("partyfinder.chat.warp_requested").withStyle(ChatFormatting.YELLOW));
         return Optional.empty();
+    }
+
+    /**
+     * Waiting for the lead to warp: Hypixel's transfer message naming us is the fastest signal, well before the Mod API
+     * party info confirms it (tick() keeps that as the fallback).
+     */
+    public static void onChat(Component message) {
+        if (warpUntil == 0 || System.currentTimeMillis() > warpUntil) return;
+        Matcher m = TRANSFERRED.matcher(FORMATTING.matcher(message.getString()).replaceAll(""));
+        String self = Minecraft.getInstance().getUser().getName();
+        while (m.find()) {
+            if (!m.group(1).equalsIgnoreCase(self)) continue;
+            warpUntil = 0;
+            PartyActions.later(CHAT_WARP_DELAY_TICKS, () -> PartyActions.command("party warp"));
+            HypixelBridge.requestRefresh(0);
+            return;
+        }
     }
 
     public static void tick() {
