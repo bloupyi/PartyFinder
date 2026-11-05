@@ -2,6 +2,7 @@ package fr.bloup.partyfinder.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import fr.bloup.partyfinder.Partyfinder;
+import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.gui.CategoryMenuScreen;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
@@ -9,6 +10,7 @@ import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.hud.PartyHud;
 import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.InviteAccept;
+import fr.bloup.partyfinder.client.party.PartyChat;
 import fr.bloup.partyfinder.client.party.LeaderPrompts;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.LiveStats;
@@ -25,9 +27,12 @@ import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 
 public class PartyfinderClient implements ClientModInitializer {
     private static final KeyMapping.Category CATEGORY =
@@ -40,6 +45,10 @@ public class PartyfinderClient implements ClientModInitializer {
     public void onInitializeClient() {
         PartyFinderConfig.load();
         HypixelBridge.init();
+        // Pack files (activities, theme, notifications) are read again on every resource reload.
+        ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(
+                Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "pack_files"),
+                (ResourceManagerReloadListener) Activities::reload);
 
         openKey = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.partyfinder.open", InputConstants.Type.KEYSYM, InputConstants.KEY_O, CATEGORY));
@@ -52,6 +61,7 @@ public class PartyfinderClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> PartyFinderCommands.register(dispatcher));
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+            Activities.tick();
             PartyActions.tick(mc);
             PartySync.tick(mc);
             PartyTransfer.tick();
@@ -60,6 +70,7 @@ public class PartyfinderClient implements ClientModInitializer {
             PartyStatus.tick();
             LiveStats.tick();
             InviteAccept.tick();
+            PartyChat.tick();
             EventAlerts.tick();
             BackendConnection.checkPublishTimeout();
             while (acceptKey.consumeClick()) {
@@ -85,6 +96,7 @@ public class PartyfinderClient implements ClientModInitializer {
             PartyStatus.reset();
             LiveStats.reset();
             InviteAccept.reset();
+            PartyChat.reset();
             LeaderPrompts.reset();
             PartyHud.reset();
         });
@@ -95,6 +107,7 @@ public class PartyfinderClient implements ClientModInitializer {
                 PartyStatus.onChat(message);
                 LiveStats.onChat(message);
                 InviteAccept.onChat(message);
+                PartyChat.onChat(message);
                 PartyTransfer.onChat(message);
             }
         });

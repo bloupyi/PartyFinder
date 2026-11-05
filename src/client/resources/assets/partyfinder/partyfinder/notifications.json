@@ -1,0 +1,73 @@
+{
+  "toast_background": "minecraft:toast/system",
+  "join_request": {
+    "icon": "minecraft:writable_book",
+    "duration": 5,
+    "sound": {
+      "id": "minecraft:block.note_block.pling",
+      "volume": 0.6,
+      "pitch": 1.5
+    }
+  },
+  "join_sent": {
+    "sound": null
+  },
+  "join_accepted": {
+    "sound": {
+      "id": "minecraft:entity.experience_orb.pickup",
+      "volume": 0.5,
+      "pitch": 1.2
+    }
+  },
+  "join_denied": {
+    "sound": null
+  },
+  "party_full": {
+    "icon": "minecraft:totem_of_undying",
+    "duration": 5,
+    "sound": {
+      "id": "minecraft:entity.player.levelup",
+      "volume": 0.5,
+      "pitch": 1.0
+    }
+  },
+  "warp": {
+    "icon": "minecraft:ender_pearl",
+    "duration": 5,
+    "sound": {
+      "id": "minecraft:block.note_block.pling",
+      "volume": 0.6,
+      "pitch": 1.5
+    }
+  },
+  "transfer": {
+    "icon": "minecraft:golden_helmet",
+    "duration": 5,
+    "sound": {
+      "id": "minecraft:block.note_block.pling",
+      "volume": 0.6,
+      "pitch": 1.5
+    }
+  },
+  "invite_accepted": {
+    "sound": null
+  },
+  "event": {
+    "icon": "minecraft:clock",
+    "duration": 8,
+    "sound": {
+      "id": "minecraft:block.note_block.bell",
+      "volume": 0.5,
+      "pitch": 1.0
+    }
+  },
+  "report": {
+    "icon": "minecraft:writable_book",
+    "duration": 5,
+    "sound": {
+      "id": "minecraft:block.note_block.bass",
+      "volume": 0.6,
+      "pitch": 1.0
+    }
+  }
+}

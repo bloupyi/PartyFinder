@@ -1,7 +1,9 @@
 package fr.bloup.partyfinder.client.gui;
 
 import fr.bloup.partyfinder.client.activity.Activities;
+import fr.bloup.partyfinder.client.activity.ListingMenu;
 import fr.bloup.partyfinder.client.activity.MenuLayout;
+import fr.bloup.partyfinder.client.activity.Theme;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
@@ -35,22 +37,13 @@ public class ChestListingScreen extends Screen {
     private static final Identifier SLOT_HIGHLIGHT_BACK = Identifier.withDefaultNamespace("container/slot_highlight_back");
     private static final Identifier SLOT_HIGHLIGHT_FRONT = Identifier.withDefaultNamespace("container/slot_highlight_front");
     private static final int IMAGE_WIDTH = 176;
-    private static final int ROWS = 6;
-    private static final int PER_PAGE = 28;
-    private static final int SLOT_PREVIOUS = 45;
-    private static final int SLOT_BACK = 48;
-    private static final int SLOT_CLOSE = 49;
-    private static final int SLOT_CREATE = 50;
-    private static final int SLOT_REQUESTS = 51;
-    private static final int SLOT_LEAVE = 52;
-    private static final int SLOT_NEXT = 53;
-    private static final int SLOT_EMPTY = 22;
     private static final Map<UUID, ItemStack> HEADS = new HashMap<>();
 
     private final Screen parent;
     private final String category;
     private final Set<String> activities;
-    private MenuLayout layout;
+    private ListingMenu menu;
+    private boolean soundPlayed;
     private int left;
     private int top;
     private int page;
@@ -68,8 +61,12 @@ public class ChestListingScreen extends Screen {
     protected void init() {
         Activities.reload();
         BackendConnection.connect();
-        layout = MenuLayout.load();
-        int imageHeight = ROWS * 18 + 24;
+        menu = ListingMenu.load(MenuLayout.load());
+        if (!soundPlayed && menu.openSound() != null) {
+            soundPlayed = true;
+            menu.openSound().play();
+        }
+        int imageHeight = menu.rows() * 18 + 24;
         left = (width - IMAGE_WIDTH) / 2;
         top = Math.max(4, (height - imageHeight) / 2);
         refresh();
@@ -88,21 +85,19 @@ public class ChestListingScreen extends Screen {
     }
 
     private int pages() {
-        return Math.max(1, (listings.size() + PER_PAGE - 1) / PER_PAGE);
+        int perPage = menu.listingSlots().size();
+        return Math.max(1, (listings.size() + perPage - 1) / perPage);
     }
 
-    /** Inner 7x4 area of the chest, row by row; -1 for border and bottom-row slots. */
-    private static int innerIndex(int slot) {
-        int row = slot / 9;
-        int col = slot % 9;
-        if (row < 1 || row > 4 || col < 1 || col > 7) return -1;
-        return (row - 1) * 7 + (col - 1);
+    /** Position of this slot among the listing slots of listing_menu.json; -1 for the others. */
+    private int innerIndex(int slot) {
+        return menu.listingSlots().indexOf(slot);
     }
 
     private Listing listingAt(int slot) {
         int inner = innerIndex(slot);
         if (inner < 0) return null;
-        int index = page * PER_PAGE + inner;
+        int index = page * menu.listingSlots().size() + inner;
         return index < listings.size() ? listings.get(index) : null;
     }
 
@@ -114,50 +109,50 @@ public class ChestListingScreen extends Screen {
         });
     }
 
-    /** Your own listing glints so it stands out. */
-    private static ItemStack ownHead(UUID uuid) {
-        ItemStack stack = head(uuid).copy();
+    /** The listing's icon: its leader's head or its activity icon, glinting for your own listing. */
+    private ItemStack listingIcon(Listing listing) {
+        ItemStack icon = menu.headIcons() ? head(listing.owner().uuid()) : Activities.get(listing.activity()).icon();
+        if (!menu.ownGlint() || !PartyFinderState.isSelf(listing.owner())) return icon;
+        ItemStack stack = icon.copy();
         stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true);
         return stack;
     }
 
-    /** Bottom-row button at this slot, or null. */
-    private ItemStack button(int slot) {
+    /** Button at this slot when it is usable right now, or null. */
+    private ListingMenu.Button button(int slot) {
+        ListingMenu.Button button = menu.buttonAt(slot).orElse(null);
+        if (button == null) return null;
         boolean online = BackendConnection.isConnected();
-        return switch (slot) {
-            case SLOT_PREVIOUS -> page > 0 ? new ItemStack(Items.ARROW) : null;
-            case SLOT_NEXT -> page < pages() - 1 ? new ItemStack(Items.ARROW) : null;
-            case SLOT_BACK -> new ItemStack(Items.ARROW);
-            case SLOT_CLOSE -> new ItemStack(Items.BARRIER);
-            case SLOT_CREATE -> online ? new ItemStack(Items.WRITABLE_BOOK) : null;
-            case SLOT_REQUESTS -> PartyFinderState.joinRequests().isEmpty() ? null : new ItemStack(Items.PAPER);
-            case SLOT_LEAVE -> online && (PartyFinderState.ownListing().isPresent() || PartySync.joinedListing().isPresent())
-                    ? new ItemStack(Items.IRON_DOOR) : null;
-            default -> null;
+        boolean shown = switch (button) {
+            case PREVIOUS -> page > 0;
+            case NEXT -> page < pages() - 1;
+            case BACK, CLOSE -> true;
+            case CREATE -> online;
+            case REQUESTS -> !PartyFinderState.joinRequests().isEmpty();
+            case LEAVE -> online && (PartyFinderState.ownListing().isPresent() || PartySync.joinedListing().isPresent());
         };
+        return shown ? button : null;
     }
 
-    private List<Component> buttonTooltip(int slot) {
+    private List<Component> buttonTooltip(ListingMenu.Button button) {
         List<Component> lines = new ArrayList<>();
-        switch (slot) {
-            case SLOT_PREVIOUS, SLOT_NEXT -> {
-                lines.add(Component.translatable(slot == SLOT_NEXT ? "partyfinder.chest.next" : "partyfinder.chest.previous")
+        switch (button) {
+            case PREVIOUS, NEXT -> {
+                lines.add(Component.translatable(button == ListingMenu.Button.NEXT ? "partyfinder.chest.next" : "partyfinder.chest.previous")
                         .withStyle(ChatFormatting.GREEN));
                 lines.add(Component.translatable("partyfinder.chest.page", page + 1, pages()).withStyle(ChatFormatting.GRAY));
             }
-            case SLOT_BACK -> lines.add(Component.translatable("partyfinder.screen.back").withStyle(ChatFormatting.GREEN));
-            case SLOT_CLOSE -> lines.add(Component.translatable("partyfinder.menu.close").withStyle(ChatFormatting.RED));
-            case SLOT_CREATE -> {
+            case BACK -> lines.add(Component.translatable("partyfinder.screen.back").withStyle(ChatFormatting.GREEN));
+            case CLOSE -> lines.add(Component.translatable("partyfinder.menu.close").withStyle(ChatFormatting.RED));
+            case CREATE -> {
                 boolean own = PartyFinderState.ownListing().isPresent();
                 lines.add(Component.translatable(own ? "partyfinder.screen.edit" : "partyfinder.screen.create").withStyle(ChatFormatting.GREEN));
                 lines.add(Component.translatable("partyfinder.menu.create.desc").withStyle(ChatFormatting.GRAY));
             }
-            case SLOT_REQUESTS -> lines.add(Component.translatable("partyfinder.screen.requests", PartyFinderState.joinRequests().size())
+            case REQUESTS -> lines.add(Component.translatable("partyfinder.screen.requests", PartyFinderState.joinRequests().size())
                     .withStyle(ChatFormatting.GREEN));
-            case SLOT_LEAVE -> lines.add(Component.translatable(PartySync.joinedListing().isPresent()
+            case LEAVE -> lines.add(Component.translatable(PartySync.joinedListing().isPresent()
                     ? "partyfinder.screen.leave" : "partyfinder.screen.delist").withStyle(ChatFormatting.RED));
-            default -> {
-            }
         }
         return lines;
     }
@@ -198,19 +193,18 @@ public class ChestListingScreen extends Screen {
             }
             return true;
         }
-        if (button(slot) == null) return true;
+        ListingMenu.Button button = button(slot);
+        if (button == null) return true;
         AbstractWidget.playButtonClickSound(minecraft.getSoundManager());
-        switch (slot) {
-            case SLOT_PREVIOUS -> page--;
-            case SLOT_NEXT -> page++;
-            case SLOT_BACK -> onClose();
-            case SLOT_CLOSE -> minecraft.gui.setScreen(null);
-            case SLOT_CREATE -> minecraft.gui.setScreen(new CreateListingScreen(this));
-            case SLOT_REQUESTS -> minecraft.gui.setScreen(new JoinRequestsScreen(this));
-            case SLOT_LEAVE -> {
+        switch (button) {
+            case PREVIOUS -> page--;
+            case NEXT -> page++;
+            case BACK -> onClose();
+            case CLOSE -> minecraft.gui.setScreen(null);
+            case CREATE -> minecraft.gui.setScreen(new CreateListingScreen(this));
+            case REQUESTS -> minecraft.gui.setScreen(new JoinRequestsScreen(this));
+            case LEAVE -> {
                 if (!PartySync.leave()) BackendConnection.delist();
-            }
-            default -> {
             }
         }
         return true;
@@ -230,9 +224,9 @@ public class ChestListingScreen extends Screen {
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractBackground(g, mouseX, mouseY, partialTick);
-        int topHeight = ROWS * 18 + 17;
-        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, top, 0, 0, IMAGE_WIDTH, topHeight, 256, 256);
-        g.blit(RenderPipelines.GUI_TEXTURED, layout.texture(), left, top + topHeight, 0, 215, IMAGE_WIDTH, 7, 256, 256);
+        int topHeight = menu.rows() * 18 + 17;
+        g.blit(RenderPipelines.GUI_TEXTURED, menu.texture(), left, top, 0, 0, IMAGE_WIDTH, topHeight, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, menu.texture(), left, top + topHeight, 0, 215, IMAGE_WIDTH, 7, 256, 256);
     }
 
     @Override
@@ -248,24 +242,27 @@ public class ChestListingScreen extends Screen {
 
         int hovered = slotAt(mouseX, mouseY);
         List<Component> tooltip = null;
-        for (int slot = 0; slot < ROWS * 9; slot++) {
+        Component fullMarker = Component.translatable("partyfinder.symbol.full");
+        for (int slot = 0; slot < menu.rows() * 9; slot++) {
             int x = slotX(slot);
             int y = slotY(slot);
             Listing listing = listingAt(slot);
-            ItemStack button = listing == null ? button(slot) : null;
-            boolean empty = listings.isEmpty() && slot == SLOT_EMPTY;
-            ItemStack icon = listing != null ? (PartyFinderState.isSelf(listing.owner()) ? ownHead(listing.owner().uuid()) : head(listing.owner().uuid()))
-                    : button != null ? button
-                    : empty ? new ItemStack(Items.MAP)
-                    : innerIndex(slot) < 0 ? layout.filler() : ItemStack.EMPTY;
+            ListingMenu.Button button = listing == null ? button(slot) : null;
+            boolean empty = listings.isEmpty() && slot == menu.emptySlot();
+            ItemStack icon = listing != null ? listingIcon(listing)
+                    : button != null ? menu.buttons().get(button).icon()
+                    : empty ? menu.emptyIcon()
+                    : innerIndex(slot) < 0 ? menu.filler() : ItemStack.EMPTY;
             boolean active = listing != null || button != null || empty;
             if (slot == hovered && active) g.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_BACK, x - 4, y - 4, 24, 24);
             if (!icon.isEmpty()) g.item(icon, x, y);
-            if (listing != null && listing.isFull()) g.text(font, "✖", x + 17 - font.width("✖"), y + 9, 0xFFFF5555, true);
+            if (menu.fullMarker() && listing != null && listing.isFull()) {
+                g.text(font, fullMarker, x + 17 - font.width(fullMarker), y + 9, Theme.color("full_marker", 0xFF5555), true);
+            }
             if (slot == hovered && active) {
                 g.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_FRONT, x - 4, y - 4, 24, 24);
                 tooltip = listing != null ? listingTooltip(listing)
-                        : button != null ? buttonTooltip(slot)
+                        : button != null ? buttonTooltip(button)
                         : List.of(Component.translatable(status == PartyFinderState.Status.ONLINE
                         ? "partyfinder.screen.empty" : "partyfinder.screen.offline").withStyle(ChatFormatting.GRAY));
             }
@@ -274,7 +271,7 @@ public class ChestListingScreen extends Screen {
     }
 
     private int slotAt(double mouseX, double mouseY) {
-        for (int slot = 0; slot < ROWS * 9; slot++) {
+        for (int slot = 0; slot < menu.rows() * 9; slot++) {
             int x = slotX(slot);
             int y = slotY(slot);
             if (mouseX >= x - 1 && mouseX < x + 17 && mouseY >= y - 1 && mouseY < y + 17) return slot;

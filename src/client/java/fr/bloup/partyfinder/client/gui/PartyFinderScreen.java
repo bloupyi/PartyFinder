@@ -1,5 +1,6 @@
 package fr.bloup.partyfinder.client.gui;
 
+import net.minecraft.client.Minecraft;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.Activity;
@@ -188,7 +189,13 @@ public class PartyFinderScreen extends Screen {
         if (listing == null || !BackendConnection.isConnected() || listing.isFull()) return;
         if (!listing.accepts(PartyFinderState.selfReports())) return;
         if (PartyFinderState.self().map(s -> s.uuid().equals(listing.owner().uuid())).orElse(false)) return;
-        PartyActions.requestJoin(listing);
+        List<String> open = ListingList.openRoles(listing);
+        if (listing.effectiveCategory().equals("kuudra") && !open.isEmpty()) {
+            Minecraft mc = Minecraft.getInstance();
+            mc.gui.setScreen(new RolePickScreen(mc.gui.screen(), listing, open));
+            return;
+        }
+        PartyActions.requestJoin(listing, null);
     }
 
     @Override

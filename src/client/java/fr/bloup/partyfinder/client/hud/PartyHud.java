@@ -1,5 +1,6 @@
 package fr.bloup.partyfinder.client.hud;
 
+import net.minecraft.resources.Identifier;
 import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.Activity;
@@ -38,6 +39,7 @@ public final class PartyHud implements HudElement {
     private static final int PAD = 3;
     private static final int BAR_HEIGHT = 5;
     private static final int MANA_HEIGHT = 3;
+    private static final int ICON_SIZE = 8;
     private static final int GEAR_SIZE = 12;
     /** Gear drawn on the health text line: small enough to fit that line without making the frame taller. */
     private static final int INLINE_GEAR_SIZE = 10;
@@ -305,7 +307,8 @@ public final class PartyHud implements HudElement {
         }
         if (rows.mana()) {
             cy += 1;
-            bar(g, cx, cy, right - cx, MANA_HEIGHT, (float) status.mana() / status.maxMana(), Activities.color("hud_mana", 0x5555FF), flip);
+            bar(g, PfSprites.HUD_BAR_MANA, cx, cy, right - cx, MANA_HEIGHT, (float) status.mana() / status.maxMana(),
+                    Activities.color("hud_mana", 0x5555FF), flip);
             cy += MANA_HEIGHT;
         }
         if (rows.info()) {
@@ -389,7 +392,19 @@ public final class PartyHud implements HudElement {
         }
     }
 
-    private record InfoPart(String text, int color) {
+    /** Text then its symbol: the pack's icon sprite when there is one, else the symbol text (❤, ❈). */
+    private record InfoPart(String text, String symbol, Identifier icon, int color) {
+        InfoPart(String text, int color) {
+            this(text, "", null, color);
+        }
+
+        String full() {
+            return text + symbol;
+        }
+
+        int width(Font font) {
+            return icon != null ? font.width(text) + ICON_SIZE + 1 : font.width(full());
+        }
     }
 
     /** Health text (gold while absorbing) and defense; "no data" when the member shares nothing. */
@@ -401,35 +416,51 @@ public final class PartyHud implements HudElement {
         }
         List<InfoPart> parts = new ArrayList<>();
         int percent = Math.round((status.healthRatio() + status.absorptionRatio()) * 100);
+        String heart = Component.translatable("partyfinder.symbol.health").getString();
         String health = switch (cfg.healthText) {
             case NUMBERS -> status.hasNumbers()
-                    ? compact(status.displayedHealth()) + "/" + compact(status.maxHealth()) + "❤" : percent + "%❤";
-            case PERCENT -> percent + "%❤";
+                    ? compact(status.displayedHealth()) + "/" + compact(status.maxHealth()) : percent + "%";
+            case PERCENT -> percent + "%";
             case NONE -> null;
         };
-        if (health != null) parts.add(new InfoPart(health, absorbing ? Activities.color("hud_absorption", 0xFFAA00) : info));
-        if (cfg.showDefense && status.defense() > 0) parts.add(new InfoPart(compact(status.defense()) + "❈", info));
+        if (health != null) {
+            parts.add(new InfoPart(health, heart, PfSprites.healthIcon(), absorbing ? Activities.color("hud_absorption", 0xFFAA00) : info));
+        }
+        if (cfg.showDefense && status.defense() > 0) {
+            parts.add(new InfoPart(compact(status.defense()), Component.translatable("partyfinder.symbol.defense").getString(),
+                    PfSprites.defenseIcon(), info));
+        }
         return parts;
     }
 
     private static String infoText(MemberStatus status, Hud cfg) {
-        return String.join("  ", infoParts(status, cfg, false).stream().map(InfoPart::text).toList());
+        return String.join("  ", infoParts(status, cfg, false).stream().map(InfoPart::full).toList());
     }
 
     private static void drawInfo(GuiGraphicsExtractor g, Font font, List<InfoPart> parts, int cx, int right, int room, int y,
                                  boolean flip, boolean shadow) {
         if (parts.isEmpty()) return;
-        String joined = String.join("  ", parts.stream().map(InfoPart::text).toList());
-        if (font.width(joined) > room) {
+        int gap = font.width("  ");
+        int total = parts.stream().mapToInt(p -> p.width(font)).sum() + gap * (parts.size() - 1);
+        if (total > room) {
+            String joined = String.join("  ", parts.stream().map(InfoPart::full).toList());
             String clipped = clip(font, joined, room);
             g.text(font, clipped, flip ? right - font.width(clipped) : cx, y, parts.getFirst().color(), shadow);
             return;
         }
-        int x = flip ? right - font.width(joined) : cx;
+        int x = flip ? right - total : cx;
         for (int i = 0; i < parts.size(); i++) {
-            String text = (i > 0 ? "  " : "") + parts.get(i).text();
-            g.text(font, text, x, y, parts.get(i).color(), shadow);
-            x += font.width(text);
+            if (i > 0) x += gap;
+            InfoPart part = parts.get(i);
+            if (part.icon() != null) {
+                g.text(font, part.text(), x, y, part.color(), shadow);
+                x += font.width(part.text()) + 1;
+                g.blitSprite(RenderPipelines.GUI_TEXTURED, part.icon(), x, y, ICON_SIZE, ICON_SIZE);
+                x += ICON_SIZE;
+            } else {
+                g.text(font, part.full(), x, y, part.color(), shadow);
+                x += font.width(part.full());
+            }
         }
     }
 
@@ -453,23 +484,37 @@ public final class PartyHud implements HudElement {
     private static void healthBar(GuiGraphicsExtractor g, int x, int y, int w, float health, float absorption, int color,
                                   boolean reverse) {
         if (absorption <= 0) {
-            bar(g, x, y, w, BAR_HEIGHT, health, color, reverse);
+            bar(g, PfSprites.HUD_BAR_HEALTH, x, y, w, BAR_HEIGHT, health, color, reverse);
             return;
         }
         float total = Math.max(1f, health + absorption);
         int healthWidth = Math.round(w * Math.clamp(health / total, 0f, 1f));
         int absorptionWidth = Math.min(w - healthWidth, Math.round(w * absorption / total));
-        bar(g, x, y, w, BAR_HEIGHT, health / total, color, reverse);
+        bar(g, PfSprites.HUD_BAR_HEALTH, x, y, w, BAR_HEIGHT, health / total, color, reverse);
         int start = reverse ? x + w - healthWidth - absorptionWidth : x + healthWidth;
-        g.fill(start, y, start + absorptionWidth, y + BAR_HEIGHT, Activities.color("hud_absorption", 0xFFAA00));
+        fillPart(g, PfSprites.HUD_BAR_ABSORPTION, x, y, w, BAR_HEIGHT, start, start + absorptionWidth,
+                Activities.color("hud_absorption", 0xFFAA00));
     }
 
-    private static void bar(GuiGraphicsExtractor g, int x, int y, int w, int h, float ratio, int color, boolean reverse) {
-        g.fill(x, y, x + w, y + h, Activities.color("hud_bar_background", 0x000000) & 0x80FFFFFF);
+    /**
+     * Bar background then the filled part. Both are sprites (hud/bar_*.png, white by default) tinted with the theme
+     * color; the fill sprite is drawn at full width and cut, so a textured pack bar is not squashed.
+     */
+    private static void bar(GuiGraphicsExtractor g, Identifier fill, int x, int y, int w, int h, float ratio, int color,
+                            boolean reverse) {
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, PfSprites.HUD_BAR_BACKGROUND, x, y, w, h,
+                Activities.color("hud_bar_background", 0x000000) & 0x80FFFFFF);
         int filled = Math.round(w * Math.clamp(ratio, 0f, 1f));
         if (filled <= 0) return;
-        if (reverse) g.fill(x + w - filled, y, x + w, y + h, color);
-        else g.fill(x, y, x + filled, y + h, color);
+        if (reverse) fillPart(g, fill, x, y, w, h, x + w - filled, x + w, color);
+        else fillPart(g, fill, x, y, w, h, x, x + filled, color);
+    }
+
+    private static void fillPart(GuiGraphicsExtractor g, Identifier fill, int x, int y, int w, int h, int from, int to, int color) {
+        if (to <= from) return;
+        g.enableScissor(from, y, to, y + h);
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, fill, x, y, w, h, color);
+        g.disableScissor();
     }
 
     private static String clip(Font font, String text, int maxWidth) {

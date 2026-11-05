@@ -1,12 +1,12 @@
 package fr.bloup.partyfinder.client.party;
 
+import fr.bloup.partyfinder.client.activity.Theme;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.Activity;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.net.BackendEvents;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -74,7 +74,7 @@ public final class PartySync {
                 if (listing.id().equals(delistedFor)) return;
                 delistedFor = listing.id();
                 BackendConnection.delist();
-                PartyActions.chat(Component.translatable("partyfinder.chat.delisted_not_leader").withStyle(ChatFormatting.YELLOW));
+                PartyActions.chat(Component.translatable("partyfinder.chat.delisted_not_leader").withColor(Theme.rgb("chat_notice")));
                 return;
             }
             if (!HypixelBridge.isKnown() || now - lastSync < SYNC_INTERVAL_MS) return;
@@ -128,7 +128,7 @@ public final class PartySync {
         if (!listingId.equals(joinedListingId)) return;
         String host = joinedListing().map(l -> l.owner().name()).orElse("?");
         joinedListingId = null;
-        PartyActions.chat(Component.translatable("partyfinder.chat.party_removed", host).withStyle(ChatFormatting.YELLOW));
+        PartyActions.chat(Component.translatable("partyfinder.chat.party_removed", host).withColor(Theme.rgb("chat_notice")));
     }
 
     /** Backend asks the Hypixel leader to kick a finder member who left through the mod (or disconnected for too long). */
@@ -137,7 +137,7 @@ public final class PartySync {
         if (!HypixelBridge.inParty() || !HypixelBridge.isLeaderOrSolo()) return;
         if (!HypixelBridge.members().contains(uuid)) return;
         if (PartyActions.partyCommand("kick", name)) {
-            PartyActions.chat(Component.translatable("partyfinder.chat.member_left", name).withStyle(ChatFormatting.YELLOW));
+            PartyActions.chat(Component.translatable("partyfinder.chat.member_left", name).withColor(Theme.rgb("chat_notice")));
             HypixelBridge.requestRefresh(1_500);
         }
     }

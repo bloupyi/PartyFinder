@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import fr.bloup.partyfinder.Partyfinder;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.item.ItemStack;
@@ -17,10 +16,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Slot> slots, Sound openSound) {
-    /** Sound played when the menu opens ("open_sound" in menu.json); null for none. */
-    public record Sound(Identifier id, float volume, float pitch) {
-    }
+/** menu.json: the category menu. openSound is played when the menu opens, null for none. */
+public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Slot> slots, PackSound openSound) {
 
     private static final Identifier FILE = Identifier.fromNamespaceAndPath(Partyfinder.MOD_ID, "partyfinder/menu.json");
     private static final Identifier DEFAULT_TEXTURE = Identifier.withDefaultNamespace("textures/gui/container/generic_54.png");
@@ -45,7 +42,7 @@ public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Sl
     private static MenuLayout parse(JsonObject json) {
         Identifier texture = json.has("texture") ? Identifier.parse(json.get("texture").getAsString()) : DEFAULT_TEXTURE;
         int rows = json.has("rows") ? Math.clamp(json.get("rows").getAsInt(), 1, 6) : 4;
-        ItemStack filler = json.has("filler") ? item(json.get("filler").getAsString()) : ItemStack.EMPTY;
+        ItemStack filler = Icons.parse(json.get("filler"), ItemStack.EMPTY);
         List<Slot> slots = new ArrayList<>();
         for (JsonElement element : json.getAsJsonArray("slots")) {
             JsonObject slot = element.getAsJsonObject();
@@ -53,21 +50,9 @@ public record MenuLayout(Identifier texture, int rows, ItemStack filler, List<Sl
             if (index < 0 || index >= rows * 9) continue;
             Action action = Action.valueOf(slot.get("action").getAsString().toUpperCase(Locale.ROOT));
             String category = slot.has("category") ? slot.get("category").getAsString() : "";
-            ItemStack icon = slot.has("icon") ? item(slot.get("icon").getAsString()) : new ItemStack(Items.PAPER);
+            ItemStack icon = Icons.parse(slot.get("icon"), new ItemStack(Items.PAPER));
             slots.add(new Slot(index, action, category, icon));
         }
-        Sound sound = null;
-        if (json.has("open_sound") && json.get("open_sound").isJsonObject()) {
-            JsonObject s = json.getAsJsonObject("open_sound");
-            Identifier id = Identifier.tryParse(s.get("id").getAsString());
-            float volume = s.has("volume") ? s.get("volume").getAsFloat() : 1f;
-            float pitch = s.has("pitch") ? s.get("pitch").getAsFloat() : 1f;
-            if (id != null) sound = new Sound(id, volume, pitch);
-        }
-        return new MenuLayout(texture, rows, filler, List.copyOf(slots), sound);
-    }
-
-    private static ItemStack item(String id) {
-        return BuiltInRegistries.ITEM.getOptional(Identifier.parse(id)).map(ItemStack::new).orElse(ItemStack.EMPTY);
+        return new MenuLayout(texture, rows, filler, List.copyOf(slots), PackSound.parse(json.get("open_sound")));
     }
 }

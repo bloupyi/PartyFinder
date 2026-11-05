@@ -1,5 +1,6 @@
 package fr.bloup.partyfinder.client.net;
 
+import fr.bloup.partyfinder.client.activity.Theme;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -16,11 +17,11 @@ import fr.bloup.partyfinder.client.party.MemberStatus;
 import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.Moderation;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
+import fr.bloup.partyfinder.client.party.Rank;
 import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.PartyTransfer;
 import fr.bloup.partyfinder.client.party.ReportSummary;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.multiplayer.ServerData;
@@ -172,7 +173,7 @@ public final class BackendConnection {
     public static void checkPublishTimeout() {
         if (publishSentAt == 0 || System.currentTimeMillis() - publishSentAt < 8_000) return;
         publishSentAt = 0;
-        PartyActions.chat(Component.translatable("partyfinder.error.no_response").withStyle(ChatFormatting.RED));
+        PartyActions.chat(Component.translatable("partyfinder.error.no_response").withColor(Theme.rgb("chat_error")));
     }
 
     public static void publishAnswered() {
@@ -181,7 +182,7 @@ public final class BackendConnection {
 
     public static void publish(ListingDraft draft) {
         if (!isConnected()) {
-            PartyActions.chat(Component.translatable("partyfinder.screen.offline").withStyle(ChatFormatting.RED));
+            PartyActions.chat(Component.translatable("partyfinder.screen.offline").withColor(Theme.rgb("chat_error")));
             return;
         }
         publishSentAt = System.currentTimeMillis();
@@ -213,9 +214,11 @@ public final class BackendConnection {
         send(message("delist"));
     }
 
-    public static void requestJoin(String listingId) {
+    /** role: the Kuudra role picked for a listing that wants roles, else null. */
+    public static void requestJoin(String listingId, String role) {
         JsonObject msg = message("join");
         msg.addProperty("listing", listingId);
+        if (role != null) msg.addProperty("role", role);
         send(msg);
     }
 
@@ -451,7 +454,11 @@ public final class BackendConnection {
                 ReportSummary reports = reports(msg.get("reports"));
                 JsonObject stats = msg.has("stats") && msg.get("stats").isJsonObject() ? msg.getAsJsonObject("stats") : null;
                 boolean unverified = msg.has("unverified") && msg.get("unverified").getAsBoolean();
-                if (from != null) onClient(() -> BackendEvents.onJoinRequest(new PartyFinderState.JoinRequest(from, reports, stats, unverified)));
+                Rank rank = Rank.parse(msg.get("rank"));
+                String role = msg.has("role") && msg.get("role").isJsonPrimitive() ? msg.get("role").getAsString() : null;
+                String safeRole = Listing.KUUDRA_ROLES.contains(role) ? role : null;
+                if (from != null) onClient(() -> BackendEvents.onJoinRequest(
+                        new PartyFinderState.JoinRequest(from, reports, stats, unverified, rank, safeRole)));
             }
             case "join_sent" -> {
                 Listing.Player owner = player(msg.get("owner"));

@@ -170,7 +170,7 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
         if (!listing.roles().isEmpty()) {
             tooltip.add(open.isEmpty()
                     ? Component.translatable("partyfinder.listing.roles.filled").withColor(0x55FF55)
-                    : Component.translatable("partyfinder.listing.roles.open", classNames(open)).withColor(0x55FFFF));
+                    : Component.translatable("partyfinder.listing.roles.open", classNames(listing, open)).withColor(0x55FFFF));
         }
         tooltip.addAll(reports.describe());
         tooltip.add(Component.empty());
@@ -179,25 +179,30 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
         return tooltip;
     }
 
-    /** Wanted dungeon roles not yet covered by a member's selected class. */
-    static List<String> openRoles(Listing listing) {
+    /** Wanted roles not yet covered: by a member's selected class (dungeons) or chosen role (Kuudra). */
+    public static List<String> openRoles(Listing listing) {
         List<String> open = new ArrayList<>(listing.roles());
+        boolean kuudra = listing.effectiveCategory().equals("kuudra");
         for (Listing.Member member : listing.members()) {
+            if (kuudra) {
+                if (member.role() != null) open.remove(member.role());
+                continue;
+            }
             if (member.stats() == null || !member.stats().has("selectedClass")) continue;
             open.remove(member.stats().get("selectedClass").getAsString());
         }
         return open;
     }
 
-    private static String classNames(List<String> classes) {
-        return classes.stream().map(c -> StatFormat.className(c).getString()).collect(Collectors.joining(", "));
+    private static String classNames(Listing listing, List<String> roles) {
+        return roles.stream().map(r -> StatFormat.roleName(listing.effectiveCategory(), r).getString()).collect(Collectors.joining(", "));
     }
 
     /** Short "needs" line: open roles, verified minimum stats, then the leader's free text. */
     private static String needs(Listing listing) {
         List<String> parts = new ArrayList<>();
         List<String> open = openRoles(listing);
-        if (!open.isEmpty()) parts.add(Component.translatable("partyfinder.listing.roles.short", classNames(open)).getString());
+        if (!open.isEmpty()) parts.add(Component.translatable("partyfinder.listing.roles.short", classNames(listing, open)).getString());
         listing.minStats().forEach((id, min) -> parts.add(StatFormat.requirement(id, min).getString()));
         if (!listing.requirements().isEmpty()) parts.add(listing.requirements());
         return String.join(" · ", parts);
@@ -206,7 +211,8 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
     private static Component memberLine(Listing listing, Activity activity, Listing.Member member) {
         boolean leader = member.uuid().equals(listing.owner().uuid());
         String name = member.name() != null ? member.name() : "?";
-        MutableComponent line = Component.literal(" " + (leader ? "★ " : "- ") + name)
+        MutableComponent line = Component.literal(" ").append(Component.translatable(leader ? "partyfinder.symbol.leader" : "partyfinder.symbol.member"))
+                .append(" " + name)
                 .withColor(leader ? Activities.color("leader", 0xFFAA00) : Activities.color("owner", 0xAAAAAA));
         List<Component> stats = StatFormat.format(activity.stats(), member.stats());
         if (!stats.isEmpty()) {

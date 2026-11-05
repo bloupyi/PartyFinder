@@ -1,18 +1,20 @@
 package fr.bloup.partyfinder.client;
 
+import fr.bloup.partyfinder.client.activity.Theme;
 import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.LeaderPrompts;
 import fr.bloup.partyfinder.client.party.Listing;
+import fr.bloup.partyfinder.client.party.PartyChat;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -26,7 +28,6 @@ import java.util.regex.Pattern;
  * the build's checkOutboundPackets task fails if other code starts sending packets.
  */
 public final class PartyActions {
-    private static final Component PREFIX = Component.literal("[PF] ").withStyle(ChatFormatting.DARK_AQUA);
     private static final int COMMAND_SPACING_TICKS = 10;
     private static final Pattern PARTY_COMMAND =
             Pattern.compile("party (?:(?:invite|kick|transfer|accept) [A-Za-z0-9_]{1,16}|leave|disband|warp)");
@@ -68,19 +69,39 @@ public final class PartyActions {
         pendingScreen = screen;
     }
 
-    /** Hypixel-style framed message: blue struck-through lines above and below, like party notifications. */
+    /** Chat prefix of every mod message (theme.json "chat.prefix", color "chat_prefix"). */
+    private static MutableComponent prefix() {
+        return Component.literal(Theme.prefix()).withColor(Theme.rgb("chat_prefix"));
+    }
+
+    /**
+     * Hypixel-style framed message: blue struck-through lines above and below, like party notifications. The line is
+     * set in theme.json ("chat": frame, frame_text, frame_length, frame_strikethrough; color "chat_frame").
+     */
     public static void framed(Component message) {
+        framed(message, null);
+    }
+
+    /** Framed message followed by lines below the frame (hover hint, buttons), all in one chat message. */
+    public static void framed(Component message, Component after) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        Component line = Component.literal("-".repeat(53)).withStyle(ChatFormatting.BLUE, ChatFormatting.STRIKETHROUGH);
-        mc.gui.chatListener().handleSystemMessage(Component.empty().append(line).append("\n").append(PREFIX.copy()).append(message)
-                .append("\n").append(line), false);
+        MutableComponent full = Component.empty();
+        if (Theme.frame()) {
+            Component line = Component.literal(Theme.frameLine())
+                    .withStyle(style -> style.withColor(Theme.rgb("chat_frame")).withStrikethrough(Theme.frameStrikethrough()));
+            full.append(line).append("\n").append(prefix()).append(message).append("\n").append(line);
+        } else {
+            full.append(prefix()).append(message);
+        }
+        if (after != null) full.append("\n").append(after);
+        mc.gui.chatListener().handleSystemMessage(full, false);
     }
 
     public static void chat(Component message) {
         Minecraft mc = Minecraft.getInstance();
         // LocalPlayer.sendSystemMessage targets the action bar in 26.x, which Hypixel overwrites constantly.
-        if (mc.player != null) mc.gui.chatListener().handleSystemMessage(PREFIX.copy().append(message), false);
+        if (mc.player != null) mc.gui.chatListener().handleSystemMessage(Component.empty().append(prefix()).append(message), false);
     }
 
     /** Party commands only: anything else (from the network, a resource pack or a bug) is dropped. */
@@ -125,11 +146,13 @@ public final class PartyActions {
     }
 
     /** The request only counts as sent once the backend forwards it (join_sent); a refusal leaves nothing pending. */
-    public static void requestJoin(Listing listing) {
-        BackendConnection.requestJoin(listing.id());
+    public static void requestJoin(Listing listing, String role) {
+        BackendConnection.requestJoin(listing.id(), role);
     }
 
     public static boolean accept(String name) {
+        PartyFinderState.joinRequests().stream().filter(r -> r.player().name().equalsIgnoreCase(name)).findFirst()
+                .ifPresent(PartyChat::accepted);
         return PartyFinderState.takeJoinRequest(name).map(player -> {
             if (!Listing.isValidName(player.name())) return true;
             // No /p invite from here: the server first checks the request is still valid and a seat is free, then
@@ -153,7 +176,7 @@ public final class PartyActions {
         if (accept) accept(name);
         else deny(name);
         chat(Component.translatable(accept ? "partyfinder.chat.request_accepted" : "partyfinder.chat.request_denied", name)
-                .withStyle(accept ? ChatFormatting.GREEN : ChatFormatting.RED));
+                .withColor(Theme.rgb(accept ? "chat_success" : "chat_error")));
     }
 
     public static boolean deny(String name) {

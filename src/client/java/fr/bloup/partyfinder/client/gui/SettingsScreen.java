@@ -32,6 +32,7 @@ public class SettingsScreen extends OptionsSubScreen {
                 W.toggle("auto_accept_transfers", c.autoAcceptTransfers, v -> c.autoAcceptTransfers = v),
                 W.toggle("notify_join_requests", c.notifyJoinRequests, v -> c.notifyJoinRequests = v),
                 W.toggle("notify_party_full", c.notifyPartyFull, v -> c.notifyPartyFull = v),
+                W.toggle("clean_party_chat", c.cleanPartyChat, v -> c.cleanPartyChat = v),
                 W.toggle("share_status", c.hud.shareStatus, v -> c.hud.shareStatus = v)));
 
         list.addHeader(Component.translatable(KEY + "section.events"));

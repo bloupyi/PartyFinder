@@ -1,9 +1,10 @@
 package fr.bloup.partyfinder.client.party;
 
+import fr.bloup.partyfinder.client.config.PartyFinderConfig;
+import fr.bloup.partyfinder.client.activity.Theme;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -63,7 +64,7 @@ public final class PartyTransfer {
         if (partyListing().isEmpty()) return Optional.of("partyfinder.error.not_in_finder_party");
         // Whoever holds the Hypixel lead right now, as the Mod API tells us: that is whose lobby we get warped into.
         BackendConnection.summon(HypixelBridge.leader().orElse(null));
-        PartyActions.chat(Component.translatable("partyfinder.chat.warp_asked").withStyle(ChatFormatting.YELLOW));
+        PartyActions.chat(Component.translatable("partyfinder.chat.warp_asked").withColor(Theme.rgb("chat_notice")));
         return Optional.empty();
     }
 
@@ -75,7 +76,7 @@ public final class PartyTransfer {
         ptmeUntil = System.currentTimeMillis() + PTME_TIMEOUT_MS;
         BackendConnection.ptme();
         HypixelBridge.requestRefresh(2_000);
-        PartyActions.chat(Component.translatable("partyfinder.chat.ptme_requested").withStyle(ChatFormatting.YELLOW));
+        PartyActions.chat(Component.translatable("partyfinder.chat.ptme_requested").withColor(Theme.rgb("chat_notice")));
         return Optional.empty();
     }
 
@@ -102,7 +103,7 @@ public final class PartyTransfer {
             ptmeUntil = 0;
         } else if (System.currentTimeMillis() > ptmeUntil) {
             ptmeUntil = 0;
-            PartyActions.chat(Component.translatable("partyfinder.chat.ptme_timeout").withStyle(ChatFormatting.RED));
+            PartyActions.chat(Component.translatable("partyfinder.chat.ptme_timeout").withColor(Theme.rgb("chat_error")));
         }
     }
 
@@ -120,7 +121,10 @@ public final class PartyTransfer {
     static void transferTo(String listingId, Listing.Player to) {
         if (!canTransfer(listingId, to)) return;
         if (PartyActions.partyCommand("transfer", to.name())) {
-            PartyActions.chat(Component.translatable("partyfinder.chat.transferring", to.name()).withStyle(ChatFormatting.YELLOW));
+            // With the clean party chat, Hypixel's transfer message is replaced by one line already.
+            if (!PartyFinderConfig.get().cleanPartyChat) {
+                PartyActions.chat(Component.translatable("partyfinder.chat.transferring", to.name()).withColor(Theme.rgb("chat_notice")));
+            }
             HypixelBridge.requestRefresh(1_500);
         }
     }
@@ -142,16 +146,17 @@ public final class PartyTransfer {
         if (now - lastSummonAt < SUMMON_COOLDOWN_MS) return;
         lastSummonAt = now;
         PartyActions.command("party warp");
-        PartyActions.chat(Component.translatable("partyfinder.chat.warping_for", from.name()).withStyle(ChatFormatting.YELLOW));
+        PartyActions.chat(Component.translatable("partyfinder.chat.warping_for", from.name()).withColor(Theme.rgb("chat_notice")));
     }
 
     /** Backend relays an invite (request accepted or /p invite by the PF leader) to us, the current Hypixel leader. */
     public static void onInviteMember(String listingId, String name) {
         if (PartySync.currentListing().filter(l -> l.id().equals(listingId)).isEmpty() || !HypixelBridge.isLeaderOrSolo()) return;
+        PartyChat.expectInvite(name);
         if (PartyActions.partyCommand("invite", name)) {
             boolean owner = PartySync.currentListing().map(l -> PartyFinderState.isSelf(l.owner())).orElse(false);
             PartyActions.chat(Component.translatable(owner ? "partyfinder.chat.inviting" : "partyfinder.chat.inviting_for", name)
-                    .withStyle(ChatFormatting.YELLOW));
+                    .withColor(Theme.rgb("chat_notice")));
         }
     }
 
@@ -171,18 +176,18 @@ public final class PartyTransfer {
         boolean owner = PartyFinderState.isSelf(listing.get().owner());
 
         if (sub.equals("warp") && !HypixelBridge.isLeaderOrSolo()) {
-            warp().ifPresent(key -> PartyActions.chat(Component.translatable(key).withStyle(ChatFormatting.RED)));
+            warp().ifPresent(key -> PartyActions.chat(Component.translatable(key).withColor(Theme.rgb("chat_error"))));
             return false;
         }
         if (!owner && (invite || LEADER_ONLY.contains(sub))) {
-            PartyActions.chat(Component.translatable("partyfinder.chat.command_blocked").withStyle(ChatFormatting.RED));
+            PartyActions.chat(Component.translatable("partyfinder.chat.command_blocked").withColor(Theme.rgb("chat_error")));
             return false;
         }
         if (owner && invite && HypixelBridge.inParty() && !HypixelBridge.isLeaderOrSolo() && !invited.isEmpty()) {
             for (String name : invited) {
                 if (!Listing.isValidName(name)) continue;
                 BackendConnection.invite(name);
-                PartyActions.chat(Component.translatable("partyfinder.chat.invite_forwarded", name).withStyle(ChatFormatting.YELLOW));
+                PartyActions.chat(Component.translatable("partyfinder.chat.invite_forwarded", name).withColor(Theme.rgb("chat_notice")));
             }
             return false;
         }

@@ -67,6 +67,19 @@ fabricApi {
 	}
 }
 
+// Every screenshot the client game tests take, copied to test-screenshots/ (git ignored) after each run.
+def gameTestShots = file("build/run/clientGameTest/screenshots")
+tasks.register("copyGameTestScreenshots", Sync) {
+	group = "verification"
+	description = "Copies the client game test screenshots to test-screenshots/."
+	from(gameTestShots)
+	into(layout.projectDirectory.dir("test-screenshots"))
+}
+tasks.matching { it.name == "runClientGameTest" }.configureEach {
+	doFirst { gameTestShots.deleteDir() }
+	finalizedBy "copyGameTestScreenshots"
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
@@ -164,6 +177,7 @@ tasks.register("checkOutboundPackets") {
 // change their own launch commands, not invent activities others see). Its copy is generated from activities.json.
 def activitiesSource = layout.projectDirectory.file("src/client/resources/assets/partyfinder/partyfinder/activities.json")
 def activitiesCatalog = layout.projectDirectory.file("backend/src/activities.json")
+def itemsCatalog = layout.projectDirectory.file("backend/src/items.json")
 def buildActivitiesCatalog = { File source ->
 	def catalog = new TreeMap<String, Object>()
 	new groovy.json.JsonSlurper().parse(source, "UTF-8").activities.each { activity ->
@@ -173,14 +187,21 @@ def buildActivitiesCatalog = { File source ->
 	}
 	groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(catalog)).replace("\r\n", "\n") + "\n"
 }
+// Notable SkyBlock items the server looks for in inventories: every id of activities.json's category_items.
+def buildItemsCatalog = { File source ->
+	def items = new TreeSet<String>()
+	(new groovy.json.JsonSlurper().parse(source, "UTF-8").category_items ?: [:]).each { category, ids -> items.addAll(ids) }
+	groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(items as List)).replace("\r\n", "\n") + "\n"
+}
 
 tasks.register("updateBackendActivities") {
 	group = "build"
-	description = "Writes the backend's activity catalog (ids, categories, option values) from activities.json."
+	description = "Writes the backend's activity catalog (ids, categories, option values) and notable items from activities.json."
 	inputs.file(activitiesSource)
-	outputs.file(activitiesCatalog)
+	outputs.files(activitiesCatalog, itemsCatalog)
 	doLast {
 		activitiesCatalog.asFile.setText(buildActivitiesCatalog(activitiesSource.asFile), "UTF-8")
+		itemsCatalog.asFile.setText(buildItemsCatalog(activitiesSource.asFile), "UTF-8")
 	}
 }
 
@@ -188,12 +209,15 @@ tasks.register("checkBackendActivities") {
 	group = "verification"
 	description = "Fails when backend/src/activities.json no longer matches the mod's activities.json."
 	inputs.file(activitiesSource)
-	inputs.file(activitiesCatalog)
+	inputs.files(activitiesCatalog, itemsCatalog)
 	doLast {
-		def expected = buildActivitiesCatalog(activitiesSource.asFile)
-		def actual = activitiesCatalog.asFile.exists() ? activitiesCatalog.asFile.getText("UTF-8").replace("\r\n", "\n") : ""
-		if (expected != actual) {
-			throw new GradleException("backend/src/activities.json is out of date: run ./gradlew updateBackendActivities")
+		[[activitiesCatalog, buildActivitiesCatalog], [itemsCatalog, buildItemsCatalog]].each { target, build ->
+			def expected = build(activitiesSource.asFile)
+			def file = target.asFile
+			def actual = file.exists() ? file.getText("UTF-8").replace("\r\n", "\n") : ""
+			if (expected != actual) {
+				throw new GradleException("backend/src/${file.name} is out of date: run ./gradlew updateBackendActivities")
+			}
 		}
 	}
 }

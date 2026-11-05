@@ -92,6 +92,44 @@ public final class StatFormat {
         return Component.literal(label(id).getString().strip() + " " + min + "+");
     }
 
+    /** Numeric value of a stat id ("sb", "cata", "hotm", "class" for the selected class, "skill_x", "slayer_x"). */
+    public static OptionalInt level(String id, JsonObject stats) {
+        if (stats == null) return OptionalInt.empty();
+        if (id.equals("sb") || id.equals("cata") || id.equals("hotm") || id.equals("secrets")) return value(stats, id);
+        if (id.equals("class")) {
+            String selected = selectedClass(stats);
+            return selected == null ? OptionalInt.empty() : value(stats, "classes", selected);
+        }
+        if (id.startsWith("class_")) return value(stats, "classes", id.substring(6));
+        if (id.startsWith("skill_")) return value(stats, "skills", id.substring(6));
+        if (id.startsWith("slayer_")) return value(stats, "slayers", id.substring(7));
+        return OptionalInt.empty();
+    }
+
+    /** Value at a path of the stats object ("floors", "7"...). */
+    public static OptionalInt at(JsonObject stats, String... path) {
+        return stats == null ? OptionalInt.empty() : value(stats, path);
+    }
+
+    public static String selectedClass(JsonObject stats) {
+        return stats == null ? null : string(stats, "selectedClass");
+    }
+
+    /** Name of a stat for "X Level N": "SkyBlock", "Catacombs", "Fishing", "Revenant"... */
+    public static Component name(String id) {
+        if (id.equals("class")) return Component.translatable("partyfinder.stat.class_level");
+        if (id.startsWith("class_")) return className(id.substring(6));
+        if (id.equals("sb") || id.equals("cata") || id.equals("hotm") || id.equals("secrets")) {
+            return Component.translatable("partyfinder.stat.name." + id);
+        }
+        return Component.literal(label(id).getString().strip());
+    }
+
+    /** Name of a wanted role: a dungeon class, or a Kuudra role (Stun, DPS, Tank, Healer). */
+    public static Component roleName(String category, String role) {
+        return category.equals("kuudra") ? Component.translatable("partyfinder.role." + role) : className(role);
+    }
+
     public static Component className(String cls) {
         return Component.translatable("partyfinder.class." + cls);
     }

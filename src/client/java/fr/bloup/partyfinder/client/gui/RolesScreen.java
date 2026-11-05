@@ -1,5 +1,6 @@
 package fr.bloup.partyfinder.client.gui;
 
+import java.util.List;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.StatFormat;
 import fr.bloup.partyfinder.client.party.Listing;
@@ -21,7 +22,8 @@ public class RolesScreen extends Screen {
     private int top;
 
     public RolesScreen(CreateListingScreen parent) {
-        super(Component.translatable("partyfinder.create.roles.title"));
+        super(Component.translatable(parent.category().equals("kuudra") ? "partyfinder.create.roles.title.kuudra"
+                : "partyfinder.create.roles.title"));
         this.parent = parent;
     }
 
@@ -29,14 +31,15 @@ public class RolesScreen extends Screen {
     protected void init() {
         int w = Math.min(WIDTH, width - 20);
         int x = width / 2 - w / 2;
-        top = Math.max(20, height / 2 - (Listing.CLASSES.size() * 24 + 40) / 2);
+        List<String> roles = Listing.rolesFor(parent.category());
+        top = Math.max(20, height / 2 - (roles.size() * 24 + 40) / 2);
         int y = top + 16;
         int maxPerClass = Math.max(1, parent.maxSize - 1);
-        for (String cls : Listing.CLASSES) {
+        for (String cls : roles) {
             int count = Collections.frequency(parent.roles, cls);
             addRenderableWidget(CycleButton.builder((Integer v) -> Component.literal(String.valueOf(v)), Math.min(count, maxPerClass))
                     .withValues(IntStream.rangeClosed(0, maxPerClass).boxed().toList())
-                    .create(x, y, w, 20, StatFormat.className(cls), (b, value) -> {
+                    .create(x, y, w, 20, StatFormat.roleName(parent.category(), cls), (b, value) -> {
                         parent.roles.removeIf(cls::equals);
                         for (int i = 0; i < value; i++) parent.roles.add(cls);
                         while (parent.roles.size() > parent.maxSize - 1) parent.roles.removeLast();
@@ -55,8 +58,11 @@ public class RolesScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(g, mouseX, mouseY, partialTick);
         g.centeredText(font, title, width / 2, top, Activities.color("title", 0xFFFFFF));
-        Component hint = Component.translatable("partyfinder.create.roles.hint", parent.maxSize - 1);
-        g.centeredText(font, TimeFormat.clip(font, hint.getString(), width - 20), width / 2, top + 16 + Listing.CLASSES.size() * 24 + 32,
+        boolean kuudra = parent.category().equals("kuudra");
+        Component hint = Component.translatable(kuudra ? "partyfinder.create.roles.hint.kuudra" : "partyfinder.create.roles.hint",
+                parent.maxSize - 1);
+        int rows = Listing.rolesFor(parent.category()).size();
+        g.centeredText(font, TimeFormat.clip(font, hint.getString(), width - 20), width / 2, top + 16 + rows * 24 + 32,
                 Activities.color("label", 0xA0A0A0));
     }
 }

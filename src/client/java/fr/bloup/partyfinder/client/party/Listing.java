@@ -46,10 +46,16 @@ public record Listing(
     }
 
     /** A member of the host's real Hypixel party; stats is the backend's compact SkyBlock summary (may be null). */
-    public record Member(UUID uuid, String name, @SerializedName("stats") JsonElement rawStats, boolean finder) {
+    public record Member(UUID uuid, String name, @SerializedName("stats") JsonElement rawStats, boolean finder,
+                         @SerializedName("rank") JsonElement rawRank, String role) {
         /** The backend sends null while stats are loading; Gson cannot read null into a JsonObject field. */
         public JsonObject stats() {
             return rawStats != null && rawStats.isJsonObject() ? rawStats.getAsJsonObject() : null;
+        }
+
+        /** Hypixel rank looked up by the server; null for none or unknown yet. */
+        public Rank rank() {
+            return Rank.parse(rawRank);
         }
     }
 
@@ -104,6 +110,17 @@ public record Listing(
     }
 
     public static final List<String> CLASSES = List.of("healer", "mage", "berserk", "archer", "tank");
+    /** Kuudra roles, picked by the requester when asking to join. */
+    public static final List<String> KUUDRA_ROLES = List.of("stun", "dps", "tank", "healer");
+
+    /** Roles a listing of this category can want: dungeon classes, Kuudra roles, or none. */
+    public static List<String> rolesFor(String category) {
+        return switch (category) {
+            case "dungeons" -> CLASSES;
+            case "kuudra" -> KUUDRA_ROLES;
+            default -> List.of();
+        };
+    }
     private static final Pattern STAT_ID = Pattern.compile("sb|cata|class|hotm|skill_[a-z]{1,16}|slayer_[a-z]{1,16}");
 
     private static Map<String, Integer> cleanMinStats(Map<String, Integer> raw) {
@@ -117,7 +134,7 @@ public record Listing(
 
     private static List<String> cleanRoles(List<String> raw) {
         if (raw == null) return List.of();
-        return raw.stream().filter(CLASSES::contains).limit(39).toList();
+        return raw.stream().filter(r -> CLASSES.contains(r) || KUUDRA_ROLES.contains(r)).limit(39).toList();
     }
 
     private static List<Member> cleanMembers(List<Member> raw, Player owner) {
@@ -126,10 +143,11 @@ public record Listing(
             for (Member member : raw) {
                 if (members.size() >= 40 || member == null || member.uuid() == null) continue;
                 String name = isValidName(member.name()) ? member.name() : null;
-                members.add(new Member(member.uuid(), name, member.stats(), member.finder()));
+                members.add(new Member(member.uuid(), name, member.stats(), member.finder(), member.rawRank(),
+                        KUUDRA_ROLES.contains(member.role()) ? member.role() : null));
             }
         }
-        if (members.isEmpty()) members.add(new Member(owner.uuid(), owner.name(), null, false));
+        if (members.isEmpty()) members.add(new Member(owner.uuid(), owner.name(), null, false, null, null));
         return List.copyOf(members);
     }
 

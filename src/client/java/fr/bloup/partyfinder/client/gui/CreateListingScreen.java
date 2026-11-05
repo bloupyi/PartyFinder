@@ -71,6 +71,15 @@ public class CreateListingScreen extends Screen {
                 Map.copyOf(minStats), List.copyOf(roles));
     }
 
+    /** Dungeons (wanted classes) and Kuudra (wanted roles) can ask for roles. */
+    boolean hasRoles() {
+        return !Listing.rolesFor(activity.category()).isEmpty();
+    }
+
+    String category() {
+        return activity.category();
+    }
+
     boolean isDungeon() {
         return activity.category().equals("dungeons");
     }
@@ -109,7 +118,8 @@ public class CreateListingScreen extends Screen {
         options.keySet().retainAll(activity.options().stream().map(Activity.Option::id).toList());
         List<String> allowed = StatFormat.requirementIds(activity.stats());
         minStats.keySet().retainAll(allowed);
-        if (!isDungeon()) roles.clear();
+        if (!hasRoles()) roles.clear();
+        roles.retainAll(Listing.rolesFor(activity.category()));
 
         int minSize = Math.max(2, partySize());
         maxSize = Math.max(minSize, maxSize);
@@ -130,8 +140,8 @@ public class CreateListingScreen extends Screen {
         requirementsButton.active = !allowed.isEmpty();
         Button rolesButton = addRenderableWidget(Button.builder(rolesLabel(),
                 b -> minecraft.gui.setScreen(new RolesScreen(this))).bounds(x + half + 4, y, formWidth - half - 4, 20).build());
-        rolesButton.active = isDungeon();
-        if (!isDungeon()) rolesButton.setTooltip(Tooltip.create(Component.translatable("partyfinder.create.roles.dungeons_only")));
+        rolesButton.active = hasRoles();
+        if (!hasRoles()) rolesButton.setTooltip(Tooltip.create(Component.translatable("partyfinder.create.roles.dungeons_only")));
         y += ROW + 14;
 
         noteLabelY = y - 12;
@@ -182,7 +192,7 @@ public class CreateListingScreen extends Screen {
     private Component rolesLabel() {
         if (roles.isEmpty()) return Component.translatable("partyfinder.create.roles.none");
         return Component.translatable("partyfinder.create.roles.label", roles.stream()
-                .map(r -> StatFormat.className(r).getString()).collect(Collectors.joining(", ")));
+                .map(r -> StatFormat.roleName(activity.category(), r).getString()).collect(Collectors.joining(", ")));
     }
 
     private static Component reportLimitName(Integer limit) {

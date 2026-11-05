@@ -20,6 +20,8 @@ public class PartyFinderConfig {
     private static PartyFinderConfig instance = new PartyFinderConfig();
 
     public boolean autoAcceptInvites = true;
+    // Hypixel's framed party messages in finder parties are replaced by one-line ones (hidden from display only).
+    public boolean cleanPartyChat = true;
     // Party Leader side: /pf warp and /pf ptme requests from party members are asked (toast + chat) unless these are on.
     public boolean autoAcceptWarps = false;
     public boolean autoAcceptTransfers = false;

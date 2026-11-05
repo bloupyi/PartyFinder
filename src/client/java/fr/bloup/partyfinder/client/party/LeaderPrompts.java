@@ -1,11 +1,10 @@
 package fr.bloup.partyfinder.client.party;
 
+import fr.bloup.partyfinder.client.activity.Notifications;
+import fr.bloup.partyfinder.client.activity.Theme;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.PartyfinderClient;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
-import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -39,7 +38,6 @@ public final class LeaderPrompts {
     }
 
     private static final long TTL_MS = 30_000;
-    private static final SystemToast.SystemToastId TOAST = new SystemToast.SystemToastId();
     private static final List<Prompt> PROMPTS = new ArrayList<>();
 
     private LeaderPrompts() {
@@ -59,21 +57,20 @@ public final class LeaderPrompts {
         PROMPTS.removeIf(p -> p.type() == type && p.player().uuid().equals(player.uuid()));
         PROMPTS.add(new Prompt(type, listingId, player, System.currentTimeMillis()));
 
-        Minecraft mc = Minecraft.getInstance();
-        SystemToast.addOrUpdate(mc.gui.toastManager(), TOAST,
+        Notifications.toast(type.id(),
                 Component.translatable("partyfinder.toast." + type.id() + ".title"),
                 Component.translatable("partyfinder.prompt." + type.id(), player.name()).append(" · ")
                         .append(Component.translatable("partyfinder.prompt.keys",
                                 PartyfinderClient.acceptKey.getTranslatedKeyMessage(), PartyfinderClient.denyKey.getTranslatedKeyMessage())));
 
         String answer = "/partyfinder answer " + type.id() + " " + player.name();
-        PartyActions.framed(Component.translatable("partyfinder.prompt." + type.id(), player.name()).withStyle(ChatFormatting.YELLOW)
+        PartyActions.framed(Component.translatable("partyfinder.prompt." + type.id(), player.name()).withColor(Theme.rgb("chat_notice"))
                         .append("\n")
-                        .append(button("partyfinder.prompt.accept", ChatFormatting.GREEN, answer + " yes"))
+                        .append(button("partyfinder.prompt.accept", "chat_button_accept", answer + " yes"))
                         .append(" ")
-                        .append(button("partyfinder.prompt.decline", ChatFormatting.RED, answer + " no"))
+                        .append(button("partyfinder.prompt.decline", "chat_button_decline", answer + " no"))
                         .append(" ")
-                        .append(button("partyfinder.prompt.auto", ChatFormatting.GOLD, "/partyfinder auto " + type.id())));
+                        .append(button("partyfinder.prompt.auto", "chat_button_auto", "/partyfinder auto " + type.id())));
     }
 
     /** Answer from the chat buttons, the command or the Y/N keys; false when no such request is pending. */
@@ -83,7 +80,7 @@ public final class LeaderPrompts {
         if (accept) {
             run(prompt.get());
         } else {
-            PartyActions.chat(Component.translatable("partyfinder.prompt.declined", prompt.get().player().name()).withStyle(ChatFormatting.RED));
+            PartyActions.chat(Component.translatable("partyfinder.prompt.declined", prompt.get().player().name()).withColor(Theme.rgb("chat_error")));
         }
         return true;
     }
@@ -94,7 +91,7 @@ public final class LeaderPrompts {
         if (type == Type.WARP) config.autoAcceptWarps = true;
         else config.autoAcceptTransfers = true;
         PartyFinderConfig.save();
-        PartyActions.chat(Component.translatable("partyfinder.prompt.auto_on." + type.id()).withStyle(ChatFormatting.GREEN));
+        PartyActions.chat(Component.translatable("partyfinder.prompt.auto_on." + type.id()).withColor(Theme.rgb("chat_success")));
         for (Prompt prompt : List.copyOf(PROMPTS)) {
             if (prompt.type() == type) answer(type, prompt.player().name(), true);
         }
@@ -143,9 +140,9 @@ public final class LeaderPrompts {
         PROMPTS.removeIf(p -> now - p.at() > TTL_MS);
     }
 
-    private static MutableComponent button(String key, ChatFormatting color, String command) {
+    private static MutableComponent button(String key, String colorKey, String command) {
         return Component.literal("[").append(Component.translatable(key)).append("]")
-                .withStyle(style -> style.withColor(color).withBold(true)
+                .withStyle(style -> style.withColor(Theme.rgb(colorKey)).withBold(true)
                         .withClickEvent(new ClickEvent.SuggestCommand(command))
                         .withHoverEvent(new HoverEvent.ShowText(Component.literal(command))));
     }

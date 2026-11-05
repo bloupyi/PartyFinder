@@ -1,4 +1,72 @@
 {
+  "categories": [
+    "mining",
+    "fishing",
+    "slayer",
+    "dungeons",
+    "kuudra",
+    "misc",
+    "crimson",
+    "rift",
+    "world_boss",
+    "grind",
+    "hunting",
+    "social"
+  ],
+  "unknown": {
+    "icon": "minecraft:paper",
+    "color": "#FFFFFF"
+  },
+  "category_items": {
+    "dungeons": [
+      "HYPERION",
+      "VALKYRIE",
+      "ASTRAEA",
+      "SCYLLA",
+      "TERMINATOR",
+      "JUJU_SHORTBOW",
+      "LAST_BREATH",
+      "GIANTS_SWORD",
+      "DARK_CLAYMORE",
+      "GYROKINETIC_WAND",
+      "ICE_SPRAY_WAND",
+      "BAT_WAND",
+      "SOUL_WHIP",
+      "POWER_WITHER_CHESTPLATE",
+      "WISE_WITHER_CHESTPLATE",
+      "TANK_WITHER_CHESTPLATE",
+      "SPEED_WITHER_CHESTPLATE"
+    ],
+    "kuudra": [
+      "TERMINATOR",
+      "HYPERION",
+      "RAGNAROCK_AXE",
+      "LAST_BREATH",
+      "GYROKINETIC_WAND"
+    ],
+    "slayer": [
+      "HYPERION",
+      "TERMINATOR",
+      "ATOMSPLIT_KATANA",
+      "VORPAL_KATANA",
+      "VOIDEDGE_KATANA",
+      "AXE_OF_THE_SHREDDED",
+      "REAPER_SCYTHE",
+      "SOUL_WHIP"
+    ],
+    "fishing": [
+      "HELLFIRE_ROD",
+      "INFERNO_ROD",
+      "MAGMA_ROD",
+      "ROD_OF_THE_SEA",
+      "SHREDDER"
+    ],
+    "mining": [
+      "DIVAN_DRILL",
+      "GEMSTONE_DRILL_4",
+      "TITANIUM_DRILL_4"
+    ]
+  },
   "activities": [
     {
       "id": "mineshaft",

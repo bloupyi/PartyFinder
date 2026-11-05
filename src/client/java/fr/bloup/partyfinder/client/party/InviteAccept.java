@@ -1,6 +1,8 @@
 package fr.bloup.partyfinder.client.party;
 
+import fr.bloup.partyfinder.client.activity.Notifications;
 import fr.bloup.partyfinder.client.PartyActions;
+import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayDeque;
@@ -64,6 +66,8 @@ public final class InviteAccept {
             if (pending != null && invite.from(pending.names())) {
                 pending = null;
                 accept(invite.inviter());
+                // Accepted for the player: only Hypixel's "You have joined ..." needs to show.
+                if (PartyFinderConfig.get().cleanPartyChat) PartyChat.hide(message);
                 return;
             }
             SEEN.addLast(invite);
@@ -83,7 +87,7 @@ public final class InviteAccept {
     }
 
     private static void accept(String name) {
-        PartyActions.partyCommand("accept", name);
+        if (PartyActions.partyCommand("accept", name)) Notifications.sound("invite_accepted");
     }
 
     public static void reset() {

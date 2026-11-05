@@ -1,9 +1,9 @@
 package fr.bloup.partyfinder.client.party;
 
+import fr.bloup.partyfinder.client.activity.Theme;
 import com.google.gson.JsonObject;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.activity.Activities;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -21,14 +21,15 @@ public final class PartyFinderState {
     public enum Status { OFFLINE, CONNECTING, ONLINE }
 
     /** stats is the requester's compact SkyBlock summary; unverified when the server could not check requirements. */
-    public record JoinRequest(Listing.Player player, ReportSummary reports, JsonObject stats, boolean unverified) {
+    public record JoinRequest(Listing.Player player, ReportSummary reports, JsonObject stats, boolean unverified, Rank rank,
+                              String role) {
     }
 
     private static final Map<String, Listing> LISTINGS = new LinkedHashMap<>();
     private static final Map<UUID, JoinRequest> JOIN_REQUESTS = new LinkedHashMap<>();
     private static final Map<UUID, Long> JOIN_REQUEST_AT = new LinkedHashMap<>();
     // Same lifetime as on the server: an older request can no longer be accepted.
-    private static final long JOIN_REQUEST_TTL_MS = 2 * 60 * 1000;
+    public static final long JOIN_REQUEST_TTL_MS = 2 * 60 * 1000;
     private static final Map<UUID, Long> OUTGOING_REQUESTS = new LinkedHashMap<>();
     private static final long OUTGOING_REQUEST_TTL_MS = 2 * 60 * 1000;
     private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
@@ -95,8 +96,11 @@ public final class PartyFinderState {
     public static void upsert(Listing listing) {
         Listing previous = LISTINGS.put(listing.id(), listing);
         if (previous == null && isSelf(listing.owner())) {
-            PartyActions.chat(Component.translatable("partyfinder.chat.published", Activities.get(listing.activity()).title(listing.options()))
-                    .withStyle(ChatFormatting.GREEN));
+            String category = listing.effectiveCategory();
+            Component name = Component.translatable("partyfinder.category." + category)
+                    .withColor(Theme.rgb("category_" + category, Theme.rgb("chat_success")));
+            PartyActions.chat(Component.literal("> ").withColor(Theme.rgb("chat_muted"))
+                    .append(Component.translatable("partyfinder.chat.queued", name).withColor(Theme.rgb("chat_success"))));
         }
         changed();
     }

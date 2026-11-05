@@ -1,12 +1,12 @@
 package fr.bloup.partyfinder.client.party;
 
+import fr.bloup.partyfinder.client.activity.Notifications;
+import fr.bloup.partyfinder.client.activity.Theme;
 import fr.bloup.partyfinder.client.PartyActions;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.activity.Activity;
 import fr.bloup.partyfinder.client.config.PartyFinderConfig;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -21,7 +21,6 @@ import java.util.regex.Pattern;
 public final class EventAlerts {
     public static final List<String> IDS = List.of("fishing_festival", "spooky_festival", "mining_fiesta", "diana");
     private static final Pattern ID = Pattern.compile("[a-z_]{1,32}");
-    private static final SystemToast.SystemToastId TOAST = new SystemToast.SystemToastId();
     private static final long TICK_MS = 1_000;
 
     public record Event(String id, long start, long end, boolean term) {
@@ -85,15 +84,14 @@ public final class EventAlerts {
         Component body = minutes > 0
                 ? Component.translatable(key, title, minutes)
                 : Component.translatable(key, title);
-        SystemToast.addOrUpdate(Minecraft.getInstance().gui.toastManager(), TOAST, body,
-                Component.translatable("partyfinder.event.open_parties", open));
-        MutableComponent line = body.copy().withStyle(ChatFormatting.LIGHT_PURPLE)
+        Notifications.toast("event", body, Component.translatable("partyfinder.event.open_parties", open));
+        MutableComponent line = body.copy().withColor(Theme.rgb("chat_event"))
                 .append(Component.literal(" ").append(Component.translatable("partyfinder.event.open_parties", open))
-                        .withStyle(ChatFormatting.GRAY));
+                        .withColor(Theme.rgb("chat_muted")));
         if (!activities.isEmpty()) {
             String command = "/partyfinder event " + event.id();
             line.append(" ").append(Component.literal("[").append(Component.translatable("partyfinder.event.view")).append("]")
-                    .withStyle(style -> style.withColor(ChatFormatting.AQUA)
+                    .withStyle(style -> style.withColor(Theme.rgb("chat_button_link"))
                             .withClickEvent(new ClickEvent.SuggestCommand(command))
                             .withHoverEvent(new HoverEvent.ShowText(Component.literal(command)))));
         }
