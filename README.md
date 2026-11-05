@@ -19,7 +19,7 @@ Settings: `/pf config` (or `config/partyfinder.json`: `autoAcceptInvites`, `noti
 
 ## Listings
 
-- **Verified requirements**: minimum Cata, class, HOTM, skills or slayer levels, checked by the server against the requester's real profile.
+- **Verified requirements**: minimum Cata, class, HOTM, skills or slayer levels, checked by the server against the requester's real profile. Changes the mod sees in game (dungeon class picked, level ups, the Skills menu) reach the server right away instead of waiting for the Hypixel API.
 - **Dungeon roles**: the leader picks the wanted classes; members' selected classes fill them and the listing shows the open ones.
 - **Reputation**: +1 recommendations (only for players you played with in the last 24 h) next to reports.
 - **History**: past finder parties are kept locally to invite the same players again, republish the same listing, +1 or report.

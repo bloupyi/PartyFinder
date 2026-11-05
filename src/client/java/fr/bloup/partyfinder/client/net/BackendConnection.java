@@ -11,6 +11,7 @@ import fr.bloup.partyfinder.client.config.PartyFinderConfig;
 import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.ListingDraft;
+import fr.bloup.partyfinder.client.party.LiveStats;
 import fr.bloup.partyfinder.client.party.MemberStatus;
 import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.Moderation;
@@ -44,7 +45,7 @@ import java.util.regex.Pattern;
 
 public final class BackendConnection {
     private static final String BACKEND_URL = "wss://partyfinder.bloup.site";
-    private static final int PROTOCOL = 6;
+    private static final int PROTOCOL = 7;
     private static final int CLOSE_BANNED = 4004;
     private static final int CLOSE_OUTDATED = 4005;
     private static final int MAX_MESSAGE_CHARS = 4 * 1024 * 1024;
@@ -236,6 +237,16 @@ public final class BackendConnection {
         send(msg);
     }
 
+    /** Own class pick (null when unchanged) and level ups seen before the Hypixel API shows them. */
+    public static void selfStats(String selectedClass, Map<String, Integer> levels) {
+        JsonObject msg = message("self_stats");
+        if (selectedClass != null) msg.addProperty("selectedClass", selectedClass);
+        JsonObject levelsJson = new JsonObject();
+        levels.forEach(levelsJson::addProperty);
+        msg.add("levels", levelsJson);
+        send(msg);
+    }
+
     public static void endorse(UUID target) {
         JsonObject msg = message("endorse");
         msg.addProperty("target", target.toString());
@@ -348,6 +359,7 @@ public final class BackendConnection {
                 onClient(() -> {
                     PartyFinderState.setSession(you, op, reports);
                     PartyFinderState.setStatus(PartyFinderState.Status.ONLINE);
+                    LiveStats.onBackendReady();
                 });
             }
             case "self_reports" -> {
@@ -433,6 +445,10 @@ public final class BackendConnection {
                 JsonObject stats = msg.has("stats") && msg.get("stats").isJsonObject() ? msg.getAsJsonObject("stats") : null;
                 boolean unverified = msg.has("unverified") && msg.get("unverified").getAsBoolean();
                 if (from != null) onClient(() -> BackendEvents.onJoinRequest(new PartyFinderState.JoinRequest(from, reports, stats, unverified)));
+            }
+            case "join_sent" -> {
+                Listing.Player owner = player(msg.get("owner"));
+                if (owner != null) onClient(() -> BackendEvents.onJoinSent(owner));
             }
             case "join_response" -> {
                 Listing.Player owner = player(msg.get("owner"));

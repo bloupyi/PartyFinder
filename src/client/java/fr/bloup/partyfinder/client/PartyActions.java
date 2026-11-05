@@ -102,10 +102,9 @@ public final class PartyActions {
         return true;
     }
 
+    /** The request only counts as sent once the backend forwards it (join_sent); a refusal leaves nothing pending. */
     public static void requestJoin(Listing listing) {
-        PartyFinderState.markRequested(listing.owner().uuid());
         BackendConnection.requestJoin(listing.id());
-        chat(Component.translatable("partyfinder.chat.join_sent", listing.owner().name()));
     }
 
     public static boolean accept(String name) {

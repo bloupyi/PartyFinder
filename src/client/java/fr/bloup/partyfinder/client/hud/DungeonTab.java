@@ -61,8 +61,9 @@ public final class DungeonTab {
         return result;
     }
 
-    private static int level(String raw) {
-        if (raw == null) return 0;
+    /** "XXV" or "25" (Hypixel's roman numeral setting); 0 when missing. */
+    public static int level(String raw) {
+        if (raw == null || raw.isEmpty()) return 0;
         if (Character.isDigit(raw.charAt(0))) return Integer.parseInt(raw);
         int total = 0;
         int previous = 0;

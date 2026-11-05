@@ -39,11 +39,9 @@ public class CreateListingScreen extends Screen {
     Activity activity;
     int maxSize;
     private String note = "";
-    private String requirements = "";
     private int maxReports = Listing.NO_REPORT_LIMIT;
     private int top;
     private int noteLabelY;
-    private int requirementsLabelY;
 
     public CreateListingScreen(Screen parent) {
         super(Component.translatable("partyfinder.create.title"));
@@ -60,7 +58,6 @@ public class CreateListingScreen extends Screen {
         options.clear();
         options.putAll(draft.options());
         note = draft.note();
-        requirements = draft.requirements();
         maxReports = REPORT_LIMITS.contains(draft.maxReports()) ? draft.maxReports() : Listing.NO_REPORT_LIMIT;
         minStats.clear();
         minStats.putAll(draft.minStats());
@@ -68,8 +65,9 @@ public class CreateListingScreen extends Screen {
         roles.addAll(draft.roles());
     }
 
+    /** Free-text requirements were replaced by verified minimum stats and roles; the note covers anything else. */
     ListingDraft draft() {
-        return new ListingDraft(activity.id(), Map.copyOf(options), note.trim(), requirements.trim(), maxSize, maxReports,
+        return new ListingDraft(activity.id(), Map.copyOf(options), note.trim(), "", maxSize, maxReports,
                 Map.copyOf(minStats), List.copyOf(roles));
     }
 
@@ -86,7 +84,7 @@ public class CreateListingScreen extends Screen {
         formWidth = Math.min(MAX_WIDTH, width - 20);
         int x = width / 2 - formWidth / 2;
         int half = (formWidth - 4) / 2;
-        int formHeight = ROW * (4 + activity.options().size()) + 2 * 38 + 32;
+        int formHeight = ROW * (4 + activity.options().size()) + 38 + 32;
         top = Math.max(24, (height - formHeight) / 2);
         int y = top;
 
@@ -143,15 +141,6 @@ public class CreateListingScreen extends Screen {
         noteBox.setHint(Component.translatable("partyfinder.create.note.hint"));
         noteBox.setResponder(value -> note = value);
         addRenderableWidget(noteBox);
-        y += 38;
-
-        requirementsLabelY = y - 12;
-        EditBox reqBox = new EditBox(font, x, y, formWidth, 20, Component.translatable("partyfinder.create.requirements"));
-        reqBox.setMaxLength(48);
-        reqBox.setValue(requirements);
-        reqBox.setHint(Component.translatable("partyfinder.create.requirements.hint"));
-        reqBox.setResponder(value -> requirements = value);
-        addRenderableWidget(reqBox);
         y += 32;
 
         int third = (formWidth - 8) / 3;
@@ -216,6 +205,5 @@ public class CreateListingScreen extends Screen {
         Component size = Component.translatable("partyfinder.create.size.current", partySize());
         g.text(font, size, x + formWidth - font.width(size), noteLabelY, labelColor);
         g.text(font, Component.translatable("partyfinder.create.note"), x, noteLabelY, labelColor);
-        g.text(font, Component.translatable("partyfinder.create.requirements"), x, requirementsLabelY, labelColor);
     }
 }

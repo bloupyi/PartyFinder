@@ -51,8 +51,6 @@
   "partyfinder.create.max_size": "Taille de la party",
   "partyfinder.create.note": "Description",
   "partyfinder.create.note.hint": "ex : il manque 2, run tranquille",
-  "partyfinder.create.requirements": "Prérequis",
-  "partyfinder.create.requirements.hint": "ex : HOTM 7, Cata 30+",
   "partyfinder.create.publish": "Publier",
   "partyfinder.requests.title": "Demandes pour rejoindre",
   "partyfinder.requests.empty": "Aucune demande en attente.",

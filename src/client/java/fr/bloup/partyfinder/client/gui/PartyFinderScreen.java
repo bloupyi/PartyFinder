@@ -31,6 +31,7 @@ public class PartyFinderScreen extends Screen {
     private final Runnable listener = this::refresh;
 
     private String search = "";
+    private long shownRevision = -1;
     private ListingList list;
     private Button joinButton;
     private Button ownButton;
@@ -119,8 +120,15 @@ public class PartyFinderScreen extends Screen {
         minecraft.gui.setScreen(parent);
     }
 
+    /** Safety net next to the listener: the list never stays behind the state while the screen is open. */
+    @Override
+    public void tick() {
+        if (PartyFinderState.revision() != shownRevision) refresh();
+    }
+
     private void refresh() {
         if (list == null) return;
+        shownRevision = PartyFinderState.revision();
         String query = search.toLowerCase(Locale.ROOT);
         List<Listing> filtered = PartyFinderState.listings().stream().filter(l -> {
             Activity activity = Activities.get(l.activity());

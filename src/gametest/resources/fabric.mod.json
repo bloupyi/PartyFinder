@@ -6,7 +6,8 @@
   "environment": "client",
   "entrypoints": {
     "fabric-client-gametest": [
-      "fr.bloup.partyfinder.gametest.HudScreenshots"
+      "fr.bloup.partyfinder.gametest.HudScreenshots",
+      "fr.bloup.partyfinder.gametest.ListingRefreshTest"
     ]
   },
   "depends": {

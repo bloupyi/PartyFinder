@@ -34,6 +34,7 @@ public final class PartyFinderState {
     private static Listing.Player self;
     private static ReportSummary selfReports = ReportSummary.NONE;
     private static boolean op;
+    private static long revision;
 
     private PartyFinderState() {
     }
@@ -171,7 +172,13 @@ public final class PartyFinderState {
         LISTENERS.remove(listener);
     }
 
+    /** Bumped on every change, so screens can also catch up by polling. */
+    public static long revision() {
+        return revision;
+    }
+
     public static void changed() {
+        revision++;
         LISTENERS.forEach(Runnable::run);
     }
 }

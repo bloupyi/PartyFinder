@@ -50,6 +50,11 @@ public final class BackendEvents {
                 .append(chatButton("partyfinder.chat.deny", ChatFormatting.RED, "/partyfinder deny " + from.name())));
     }
 
+    public static void onJoinSent(Listing.Player owner) {
+        PartyFinderState.markRequested(owner.uuid());
+        PartyActions.chat(Component.translatable("partyfinder.chat.join_sent", owner.name()));
+    }
+
     public static void onJoinResponse(String listingId, Listing.Player owner, String inviter, boolean accept) {
         if (!PartyFinderState.consumeRequested(owner.uuid())) return;
         if (!accept) {

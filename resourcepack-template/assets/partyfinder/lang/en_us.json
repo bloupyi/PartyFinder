@@ -51,8 +51,6 @@
   "partyfinder.create.max_size": "Party size",
   "partyfinder.create.note": "Description",
   "partyfinder.create.note.hint": "e.g. need 2 more, chill run",
-  "partyfinder.create.requirements": "Requirements",
-  "partyfinder.create.requirements.hint": "e.g. HOTM 7, Cata 30+",
   "partyfinder.create.publish": "Publish",
   "partyfinder.requests.title": "Join requests",
   "partyfinder.requests.empty": "No pending request.",
