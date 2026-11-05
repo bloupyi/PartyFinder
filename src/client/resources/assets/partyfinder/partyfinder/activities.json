@@ -67,6 +67,133 @@
       "TITANIUM_DRILL_4"
     ]
   },
+  "category_tags": {
+    "mining": [
+      "commissions",
+      "powder",
+      "gemstones",
+      "mithril",
+      "glacite",
+      "fossils",
+      "corpses",
+      "scatha",
+      "golden_goblin",
+      "xp",
+      "chill",
+      "beginner_friendly"
+    ],
+    "fishing": [
+      "thunder",
+      "lord_jawbus",
+      "ragnarok",
+      "plhlegblast",
+      "fiery_scuttler",
+      "loch_emperor",
+      "water_hydra",
+      "great_white_shark",
+      "grim_reaper",
+      "phantom_fisher",
+      "yeti",
+      "reindrake",
+      "titanoboa",
+      "wiki_tiki",
+      "abyssal_miner",
+      "stridersurfer",
+      "trophy_fish",
+      "treasure",
+      "xp",
+      "chill"
+    ],
+    "slayer": [
+      "carry",
+      "xp",
+      "rng",
+      "loot_share",
+      "aatrox",
+      "chill",
+      "beginner_friendly",
+      "voice_chat"
+    ],
+    "dungeons": [
+      "s_plus",
+      "speedrun",
+      "carry",
+      "chill",
+      "beginner_friendly",
+      "experienced",
+      "frag_run",
+      "blood_rush",
+      "secrets",
+      "class_xp",
+      "completions",
+      "voice_chat"
+    ],
+    "kuudra": [
+      "speedrun",
+      "carry",
+      "chill",
+      "beginner_friendly",
+      "experienced",
+      "profit",
+      "completions",
+      "voice_chat"
+    ],
+    "misc": [
+      "inquisitor",
+      "mythological",
+      "burrows",
+      "carry",
+      "help",
+      "chill"
+    ],
+    "crimson": [
+      "carry",
+      "reputation",
+      "faction_quests",
+      "dojo",
+      "loot_share",
+      "chill"
+    ],
+    "rift": [
+      "carry",
+      "motes",
+      "enigma_souls",
+      "timecharms",
+      "help",
+      "chill"
+    ],
+    "world_boss": [
+      "carry",
+      "loot_share",
+      "eyes",
+      "superior",
+      "beginner_friendly",
+      "chill"
+    ],
+    "grind": [
+      "xp",
+      "loot",
+      "magic_find",
+      "afk",
+      "carry",
+      "chill"
+    ],
+    "hunting": [
+      "shards",
+      "xp",
+      "carry",
+      "beginner_friendly",
+      "chill"
+    ],
+    "social": [
+      "buying",
+      "selling",
+      "trading",
+      "giveaway",
+      "help",
+      "chill"
+    ]
+  },
   "activities": [
     {
       "id": "mineshaft",

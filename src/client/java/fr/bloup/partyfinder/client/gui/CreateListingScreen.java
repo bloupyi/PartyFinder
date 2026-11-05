@@ -35,6 +35,7 @@ public class CreateListingScreen extends Screen {
     final Map<String, String> options = new LinkedHashMap<>();
     final Map<String, Integer> minStats = new LinkedHashMap<>();
     final List<String> roles = new ArrayList<>();
+    final List<String> tags = new ArrayList<>();
     private int formWidth = MAX_WIDTH;
     Activity activity;
     int maxSize;
@@ -63,12 +64,14 @@ public class CreateListingScreen extends Screen {
         minStats.putAll(draft.minStats());
         roles.clear();
         roles.addAll(draft.roles());
+        tags.clear();
+        tags.addAll(draft.tags());
     }
 
     /** Free-text requirements were replaced by verified minimum stats and roles; the note covers anything else. */
     ListingDraft draft() {
         return new ListingDraft(activity.id(), Map.copyOf(options), note.trim(), "", maxSize, maxReports,
-                Map.copyOf(minStats), List.copyOf(roles));
+                Map.copyOf(minStats), List.copyOf(roles), List.copyOf(tags));
     }
 
     /** Dungeons (wanted classes) and Kuudra (wanted roles) can ask for roles. */
@@ -93,7 +96,7 @@ public class CreateListingScreen extends Screen {
         formWidth = Math.min(MAX_WIDTH, width - 20);
         int x = width / 2 - formWidth / 2;
         int half = (formWidth - 4) / 2;
-        int formHeight = ROW * (4 + activity.options().size()) + 38 + 32;
+        int formHeight = ROW * (5 + activity.options().size()) + 38 + 32;
         top = Math.max(24, (height - formHeight) / 2);
         int y = top;
 
@@ -120,6 +123,8 @@ public class CreateListingScreen extends Screen {
         minStats.keySet().retainAll(allowed);
         if (!hasRoles()) roles.clear();
         roles.retainAll(Listing.rolesFor(activity.category()));
+        List<String> availableTags = Activities.tagsFor(activity.category());
+        tags.retainAll(availableTags);
 
         int minSize = Math.max(2, partySize());
         maxSize = Math.max(minSize, maxSize);
@@ -142,6 +147,13 @@ public class CreateListingScreen extends Screen {
                 b -> minecraft.gui.setScreen(new RolesScreen(this))).bounds(x + half + 4, y, formWidth - half - 4, 20).build());
         rolesButton.active = hasRoles();
         if (!hasRoles()) rolesButton.setTooltip(Tooltip.create(Component.translatable("partyfinder.create.roles.dungeons_only")));
+        y += ROW;
+
+        Button tagsButton = addRenderableWidget(Button.builder(tagsLabel(), b -> minecraft.gui.setScreen(new TagsScreen(this,
+                Component.translatable("partyfinder.tags.title"), availableTags, tags, Listing.MAX_TAGS, "partyfinder.tags.hint", () -> {
+        }))).bounds(x, y, formWidth, 20).build());
+        tagsButton.active = !availableTags.isEmpty();
+        if (availableTags.isEmpty()) tagsButton.setTooltip(Tooltip.create(Component.translatable("partyfinder.create.tags.unavailable")));
         y += ROW + 14;
 
         noteLabelY = y - 12;
@@ -179,6 +191,7 @@ public class CreateListingScreen extends Screen {
             options.clear();
             minStats.clear();
             roles.clear();
+            tags.clear();
         }
     }
 
@@ -193,6 +206,12 @@ public class CreateListingScreen extends Screen {
         if (roles.isEmpty()) return Component.translatable("partyfinder.create.roles.none");
         return Component.translatable("partyfinder.create.roles.label", roles.stream()
                 .map(r -> StatFormat.roleName(activity.category(), r).getString()).collect(Collectors.joining(", ")));
+    }
+
+    private Component tagsLabel() {
+        if (tags.isEmpty()) return Component.translatable("partyfinder.create.tags.none");
+        return Component.translatable("partyfinder.create.tags.label",
+                tags.stream().map(t -> Activities.tagName(t).getString()).collect(Collectors.joining(", ")));
     }
 
     private static Component reportLimitName(Integer limit) {

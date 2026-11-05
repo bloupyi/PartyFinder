@@ -12,7 +12,8 @@
       "fr.bloup.partyfinder.gametest.LeaderPromptTest",
       "fr.bloup.partyfinder.gametest.IconsTest",
       "fr.bloup.partyfinder.gametest.PackFilesTest",
-      "fr.bloup.partyfinder.gametest.PartyChatTest"
+      "fr.bloup.partyfinder.gametest.PartyChatTest",
+      "fr.bloup.partyfinder.gametest.TagsTest"
     ]
   },
   "depends": {

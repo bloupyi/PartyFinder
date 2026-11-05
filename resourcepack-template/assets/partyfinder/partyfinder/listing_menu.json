@@ -41,6 +41,10 @@
       "slot": 45,
       "icon": "minecraft:arrow"
     },
+    "tags": {
+      "slot": 46,
+      "icon": "minecraft:name_tag"
+    },
     "back": {
       "slot": 48,
       "icon": "minecraft:arrow"

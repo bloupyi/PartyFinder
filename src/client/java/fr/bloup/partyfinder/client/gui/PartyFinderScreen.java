@@ -17,8 +17,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class PartyFinderScreen extends Screen {
@@ -26,6 +30,8 @@ public class PartyFinderScreen extends Screen {
     private static final int FOOTER_HEIGHT = 56;
     private static final int MAX_CONTENT_WIDTH = 320;
     private static final int GAP = 4;
+    /** Tags filtered by, per screen (category and activities), kept while the game runs; shared by both styles. */
+    private static final Map<String, List<String>> TAG_FILTERS = new HashMap<>();
 
     private final Screen parent;
     private final String category;
@@ -65,10 +71,21 @@ public class PartyFinderScreen extends Screen {
         int half = (contentWidth - GAP) / 2;
         int third = (contentWidth - 2 * GAP) / 3;
 
+        List<String> tags = availableTags(category, activities);
+        int backWidth = tags.isEmpty() ? half : third;
         addRenderableWidget(Button.builder(Component.translatable("partyfinder.screen.back"), b -> onClose())
-                .bounds(left, 22, half, 20).build());
+                .bounds(left, 22, backWidth, 20).build());
+        int searchX = left + backWidth + GAP;
+        if (!tags.isEmpty()) {
+            List<String> wanted = tagFilter(category, activities);
+            Button tagsButton = addRenderableWidget(Button.builder(tagsButtonLabel(wanted), b -> minecraft.gui.setScreen(new TagsScreen(this,
+                    Component.translatable("partyfinder.tags.filter.title"), tags, wanted, 0, "partyfinder.tags.filter.hint", this::refresh)))
+                    .bounds(searchX, 22, third, 20).build());
+            if (!wanted.isEmpty()) tagsButton.setTooltip(Tooltip.create(tagNames(wanted)));
+            searchX += third + GAP;
+        }
 
-        EditBox searchBox = new EditBox(font, left + half + GAP, 22, contentWidth - half - GAP, 20,
+        EditBox searchBox = new EditBox(font, searchX, 22, left + contentWidth - searchX, 20,
                 Component.translatable("partyfinder.screen.search"));
         searchBox.setHint(Component.translatable("partyfinder.screen.search"));
         searchBox.setMaxLength(32);
@@ -131,7 +148,7 @@ public class PartyFinderScreen extends Screen {
     private void refresh() {
         if (list == null) return;
         shownRevision = PartyFinderState.revision();
-        list.setListings(filter(category, activities, search));
+        list.setListings(filter(category, activities, search, tagFilter(category, activities)));
         updateButtons();
     }
 
@@ -170,19 +187,52 @@ public class PartyFinderScreen extends Screen {
                 : new PartyFinderScreen(parent, category, activities, title);
     }
 
-    /** Listings of this screen's category, activities and search, in display order. */
-    static List<Listing> filter(String category, Set<String> activities, String search) {
+    /**
+     * Listings of this screen's category, activities and search, in display order. With tags: only listings that have
+     * at least one of them, the ones matching the most first.
+     */
+    public static List<Listing> filter(String category, Set<String> activities, String search, List<String> tags) {
         String query = search.toLowerCase(Locale.ROOT);
-        return PartyFinderState.listings().stream().filter(l -> {
+        List<Listing> result = PartyFinderState.listings().stream().filter(l -> {
             Activity activity = Activities.get(l.activity());
             if (!category.isEmpty() && !l.effectiveCategory().equals(category)) return false;
             if (!activities.isEmpty() && !activities.contains(activity.id())) return false;
+            if (!tags.isEmpty() && l.matchingTags(tags) == 0) return false;
             if (query.isEmpty()) return true;
             return activity.name().getString().toLowerCase(Locale.ROOT).contains(query)
                     || l.owner().name().toLowerCase(Locale.ROOT).contains(query)
                     || l.note().toLowerCase(Locale.ROOT).contains(query)
-                    || l.requirements().toLowerCase(Locale.ROOT).contains(query);
+                    || l.requirements().toLowerCase(Locale.ROOT).contains(query)
+                    || l.tags().stream().anyMatch(t -> Activities.tagName(t).getString().toLowerCase(Locale.ROOT).contains(query));
         }).toList();
+        if (tags.isEmpty()) return result;
+        List<Listing> sorted = new ArrayList<>(result);
+        sorted.sort(Comparator.comparingInt((Listing l) -> l.matchingTags(tags)).reversed());
+        return sorted;
+    }
+
+    /** Tags a screen can filter by: its category's, or those of its activities' categories (event screens). */
+    public static List<String> availableTags(String category, Set<String> activities) {
+        if (!category.isEmpty()) return Activities.tagsFor(category);
+        if (activities.isEmpty()) return List.of();
+        return Activities.tagsFor(activities.stream().map(id -> Activities.get(id).category()).distinct().toList());
+    }
+
+    /** The tags this screen filters by; edited in place by the tag screen. */
+    public static List<String> tagFilter(String category, Set<String> activities) {
+        String key = category + "|" + String.join(",", activities.stream().sorted().toList());
+        List<String> wanted = TAG_FILTERS.computeIfAbsent(key, k -> new ArrayList<>());
+        wanted.retainAll(availableTags(category, activities));
+        return wanted;
+    }
+
+    static Component tagsButtonLabel(List<String> wanted) {
+        return wanted.isEmpty() ? Component.translatable("partyfinder.screen.tags")
+                : Component.translatable("partyfinder.screen.tags.active", wanted.size());
+    }
+
+    static Component tagNames(List<String> tags) {
+        return Component.literal(String.join(", ", tags.stream().map(t -> Activities.tagName(t).getString()).toList()));
     }
 
     static void join(Listing listing) {

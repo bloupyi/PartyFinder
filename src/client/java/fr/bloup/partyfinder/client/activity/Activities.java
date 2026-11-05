@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.gui.PfSprites;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
@@ -15,6 +16,7 @@ import net.minecraft.world.item.Items;
 
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,6 +35,10 @@ public final class Activities {
     private static final List<String> CATEGORIES = new ArrayList<>();
     private static Activity unknown;
     private static final Map<String, List<String>> CATEGORY_ITEMS = new LinkedHashMap<>();
+    /** Most tags a category can offer; the server holds the same limit. */
+    public static final int MAX_CATEGORY_TAGS = 20;
+    private static final Pattern TAG_ID = Pattern.compile("[a-z0-9_]{1,32}");
+    private static final Map<String, List<String>> CATEGORY_TAGS = new LinkedHashMap<>();
     private static boolean pending;
 
     private Activities() {
@@ -57,6 +63,7 @@ public final class Activities {
         CATEGORIES.clear();
         unknown = null;
         CATEGORY_ITEMS.clear();
+        CATEGORY_TAGS.clear();
         read(manager, ACTIVITIES).ifPresent(json -> {
             // Optional explicit category order; categories it does not name follow in activity order.
             if (json.has("categories") && json.get("categories").isJsonArray()) {
@@ -76,6 +83,17 @@ public final class Activities {
                     List<String> ids = new ArrayList<>();
                     e.getValue().getAsJsonArray().forEach(id -> ids.add(id.getAsString()));
                     CATEGORY_ITEMS.put(e.getKey(), List.copyOf(ids));
+                }
+            }
+            if (json.has("category_tags") && json.get("category_tags").isJsonObject()) {
+                for (Map.Entry<String, JsonElement> e : json.getAsJsonObject("category_tags").entrySet()) {
+                    if (!e.getValue().isJsonArray()) continue;
+                    List<String> ids = new ArrayList<>();
+                    for (JsonElement id : e.getValue().getAsJsonArray()) {
+                        String tag = id.isJsonPrimitive() ? id.getAsString() : "";
+                        if (TAG_ID.matcher(tag).matches() && !ids.contains(tag) && ids.size() < MAX_CATEGORY_TAGS) ids.add(tag);
+                    }
+                    CATEGORY_TAGS.put(e.getKey(), List.copyOf(ids));
                 }
             }
             if (json.has("unknown") && json.get("unknown").isJsonObject()) {
@@ -134,6 +152,20 @@ public final class Activities {
     /** Notable SkyBlock item ids shown for a category's members ("category_items"), in display order. */
     public static List<String> itemsFor(String category) {
         return CATEGORY_ITEMS.getOrDefault(category, List.of());
+    }
+
+    /** Tags a listing of this category can carry ("category_tags"), in display order. */
+    public static List<String> tagsFor(String category) {
+        return CATEGORY_TAGS.getOrDefault(category, List.of());
+    }
+
+    /** Tags of several categories, each once, in category order. */
+    public static List<String> tagsFor(Collection<String> categories) {
+        return categories.stream().flatMap(c -> tagsFor(c).stream()).distinct().toList();
+    }
+
+    public static Component tagName(String tag) {
+        return Component.translatable("partyfinder.tag." + tag);
     }
 
     public static boolean isSafeCommand(String command) {

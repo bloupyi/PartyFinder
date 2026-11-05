@@ -6,6 +6,8 @@
     "owner": "#AAAAAA",
     "note": "#E0E0E0",
     "requirements": "#FFAA00",
+    "tags": "#FF55FF",
+    "tag_selected": "#55FF55",
     "age": "#808080",
     "slots_open": "#55FF55",
     "slots_full": "#FF5555",

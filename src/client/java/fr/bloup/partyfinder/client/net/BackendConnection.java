@@ -187,11 +187,11 @@ public final class BackendConnection {
         }
         publishSentAt = System.currentTimeMillis();
         publish(draft.activity(), draft.options(), draft.note(), draft.requirements(), draft.maxSize(), draft.maxReports(),
-                draft.minStats(), draft.roles());
+                draft.minStats(), draft.roles(), draft.tags());
     }
 
     public static void publish(String activity, Map<String, String> options, String note, String requirements, int maxSize, int maxReports,
-                               Map<String, Integer> minStats, List<String> roles) {
+                               Map<String, Integer> minStats, List<String> roles, List<String> tags) {
         JsonObject msg = message("publish");
         msg.addProperty("activity", activity);
         JsonObject optionsJson = new JsonObject();
@@ -207,6 +207,9 @@ public final class BackendConnection {
         JsonArray rolesJson = new JsonArray();
         roles.forEach(rolesJson::add);
         msg.add("roles", rolesJson);
+        JsonArray tagsJson = new JsonArray();
+        tags.forEach(tagsJson::add);
+        msg.add("tags", tagsJson);
         send(msg);
     }
 

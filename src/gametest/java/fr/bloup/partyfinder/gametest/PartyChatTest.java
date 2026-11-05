@@ -71,7 +71,7 @@ public class PartyChatTest implements FabricClientGameTest {
                 long now = System.currentTimeMillis();
                 PartyFinderState.upsert(new Listing("own", self, "dungeons_floor", Map.of(), "", "", 1, 5, Listing.NO_REPORT_LIMIT,
                         Map.of(), List.of(), ReportSummary.NONE, List.of(new Listing.Member(self.uuid(), self.name(), null, false, null, null)),
-                        null, now, now, "dungeons"));
+                        null, now, now, "dungeons", List.of()));
             });
 
             // 2. A player asks to join.
@@ -127,7 +127,7 @@ public class PartyChatTest implements FabricClientGameTest {
                 long now = System.currentTimeMillis();
                 PartyFinderState.upsert(new Listing("own", self, kuudraActivity(), Map.of(), "", "", 1, 4, Listing.NO_REPORT_LIMIT,
                         Map.of(), List.of("stun", "dps", "dps"), ReportSummary.NONE,
-                        List.of(new Listing.Member(self.uuid(), self.name(), null, false, null, null)), null, now, now, "kuudra"));
+                        List.of(new Listing.Member(self.uuid(), self.name(), null, false, null, null)), null, now, now, "kuudra", List.of()));
                 BackendEvents.onJoinRequest(new PartyFinderState.JoinRequest(
                         new Listing.Player(UUID.randomUUID(), "Stunner"), ReportSummary.NONE, kuudraStats(), false, MVP_PLUS_PLUS, "stun"));
             });

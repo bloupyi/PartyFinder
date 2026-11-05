@@ -23,7 +23,7 @@ public record ListingMenu(Identifier texture, int rows, ItemStack filler, PackSo
                           boolean headIcons, boolean ownGlint, boolean fullMarker, int emptySlot, ItemStack emptyIcon,
                           Map<Button, ButtonSlot> buttons) {
     public enum Button {
-        PREVIOUS, NEXT, BACK, CLOSE, CREATE, REQUESTS, LEAVE;
+        PREVIOUS, NEXT, BACK, CLOSE, CREATE, REQUESTS, LEAVE, TAGS;
 
         public String id() {
             return name().toLowerCase(Locale.ROOT);
@@ -99,6 +99,7 @@ public record ListingMenu(Identifier texture, int rows, ItemStack filler, PackSo
 
     private static void defaults(Map<Button, ButtonSlot> buttons, int bottom) {
         buttons.put(Button.PREVIOUS, new ButtonSlot(bottom, new ItemStack(Items.ARROW)));
+        buttons.put(Button.TAGS, new ButtonSlot(bottom + 1, new ItemStack(Items.NAME_TAG)));
         buttons.put(Button.BACK, new ButtonSlot(bottom + 3, new ItemStack(Items.ARROW)));
         buttons.put(Button.CLOSE, new ButtonSlot(bottom + 4, new ItemStack(Items.BARRIER)));
         buttons.put(Button.CREATE, new ButtonSlot(bottom + 5, new ItemStack(Items.WRITABLE_BOOK)));

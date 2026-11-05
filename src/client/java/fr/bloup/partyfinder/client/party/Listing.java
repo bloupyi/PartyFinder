@@ -29,9 +29,12 @@ public record Listing(
         UUID leader,
         long createdAt,
         long updatedAt,
-        String category
+        String category,
+        List<String> tags
 ) {
     public static final int NO_REPORT_LIMIT = -1;
+    /** Most tags one listing can carry; the server holds the same limit. */
+    public static final int MAX_TAGS = 5;
 
     private static final Pattern ID = Pattern.compile("[0-9a-f-]{1,36}");
     private static final Pattern ACTIVITY = Pattern.compile("[a-z0-9_]{1,32}");
@@ -137,6 +140,16 @@ public record Listing(
         return raw.stream().filter(r -> CLASSES.contains(r) || KUUDRA_ROLES.contains(r)).limit(39).toList();
     }
 
+    private static List<String> cleanTags(List<String> raw) {
+        if (raw == null) return List.of();
+        return raw.stream().filter(t -> t != null && ACTIVITY.matcher(t).matches()).distinct().limit(MAX_TAGS).toList();
+    }
+
+    /** Tags of this listing that are among the wanted ones. */
+    public int matchingTags(java.util.Collection<String> wanted) {
+        return (int) tags.stream().filter(wanted::contains).count();
+    }
+
     private static List<Member> cleanMembers(List<Member> raw, Player owner) {
         List<Member> members = new ArrayList<>();
         if (raw != null) {
@@ -173,6 +186,7 @@ public record Listing(
                 raw.leader(),
                 raw.createdAt(),
                 raw.updatedAt(),
-                raw.category() != null && ACTIVITY.matcher(raw.category()).matches() ? raw.category() : null);
+                raw.category() != null && ACTIVITY.matcher(raw.category()).matches() ? raw.category() : null,
+                cleanTags(raw.tags()));
     }
 }

@@ -178,6 +178,7 @@ tasks.register("checkOutboundPackets") {
 def activitiesSource = layout.projectDirectory.file("src/client/resources/assets/partyfinder/partyfinder/activities.json")
 def activitiesCatalog = layout.projectDirectory.file("backend/src/activities.json")
 def itemsCatalog = layout.projectDirectory.file("backend/src/items.json")
+def tagsCatalog = layout.projectDirectory.file("backend/src/tags.json")
 def buildActivitiesCatalog = { File source ->
 	def catalog = new TreeMap<String, Object>()
 	new groovy.json.JsonSlurper().parse(source, "UTF-8").activities.each { activity ->
@@ -194,14 +195,27 @@ def buildItemsCatalog = { File source ->
 	groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(items as List)).replace("\r\n", "\n") + "\n"
 }
 
+// Tags a listing can carry, per category: activities.json's category_tags, at most 20 per category.
+def buildTagsCatalog = { File source ->
+	def tags = new TreeMap<String, Object>()
+	(new groovy.json.JsonSlurper().parse(source, "UTF-8").category_tags ?: [:]).each { category, ids ->
+		if (ids.size() > 20) throw new GradleException("category_tags.${category} has ${ids.size()} tags (max 20)")
+		ids.each { if (!(it ==~ /[a-z0-9_]{1,32}/)) throw new GradleException("category_tags.${category}: invalid tag id ${it}") }
+		if (ids.unique(false).size() != ids.size()) throw new GradleException("category_tags.${category} repeats a tag")
+		tags[category] = ids
+	}
+	groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(tags)).replace("\r\n", "\n") + "\n"
+}
+
 tasks.register("updateBackendActivities") {
 	group = "build"
-	description = "Writes the backend's activity catalog (ids, categories, option values) and notable items from activities.json."
+	description = "Writes the backend's activity catalog (ids, categories, option values), notable items and tags from activities.json."
 	inputs.file(activitiesSource)
-	outputs.files(activitiesCatalog, itemsCatalog)
+	outputs.files(activitiesCatalog, itemsCatalog, tagsCatalog)
 	doLast {
 		activitiesCatalog.asFile.setText(buildActivitiesCatalog(activitiesSource.asFile), "UTF-8")
 		itemsCatalog.asFile.setText(buildItemsCatalog(activitiesSource.asFile), "UTF-8")
+		tagsCatalog.asFile.setText(buildTagsCatalog(activitiesSource.asFile), "UTF-8")
 	}
 }
 
@@ -209,9 +223,9 @@ tasks.register("checkBackendActivities") {
 	group = "verification"
 	description = "Fails when backend/src/activities.json no longer matches the mod's activities.json."
 	inputs.file(activitiesSource)
-	inputs.files(activitiesCatalog, itemsCatalog)
+	inputs.files(activitiesCatalog, itemsCatalog, tagsCatalog)
 	doLast {
-		[[activitiesCatalog, buildActivitiesCatalog], [itemsCatalog, buildItemsCatalog]].each { target, build ->
+		[[activitiesCatalog, buildActivitiesCatalog], [itemsCatalog, buildItemsCatalog], [tagsCatalog, buildTagsCatalog]].each { target, build ->
 			def expected = build(activitiesSource.asFile)
 			def file = target.asFile
 			def actual = file.exists() ? file.getText("UTF-8").replace("\r\n", "\n") : ""

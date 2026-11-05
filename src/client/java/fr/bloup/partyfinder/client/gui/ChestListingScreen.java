@@ -80,7 +80,7 @@ public class ChestListingScreen extends Screen {
 
     private void refresh() {
         shownRevision = PartyFinderState.revision();
-        listings = PartyFinderScreen.filter(category, activities, "");
+        listings = PartyFinderScreen.filter(category, activities, "", PartyFinderScreen.tagFilter(category, activities));
         page = Math.clamp(page, 0, pages() - 1);
     }
 
@@ -130,6 +130,7 @@ public class ChestListingScreen extends Screen {
             case CREATE -> online;
             case REQUESTS -> !PartyFinderState.joinRequests().isEmpty();
             case LEAVE -> online && (PartyFinderState.ownListing().isPresent() || PartySync.joinedListing().isPresent());
+            case TAGS -> !PartyFinderScreen.availableTags(category, activities).isEmpty();
         };
         return shown ? button : null;
     }
@@ -153,6 +154,17 @@ public class ChestListingScreen extends Screen {
                     .withStyle(ChatFormatting.GREEN));
             case LEAVE -> lines.add(Component.translatable(PartySync.joinedListing().isPresent()
                     ? "partyfinder.screen.leave" : "partyfinder.screen.delist").withStyle(ChatFormatting.RED));
+            case TAGS -> {
+                List<String> wanted = PartyFinderScreen.tagFilter(category, activities);
+                lines.add(Component.translatable("partyfinder.chest.tags").withStyle(ChatFormatting.GREEN));
+                if (wanted.isEmpty()) {
+                    lines.add(Component.translatable("partyfinder.chest.tags.none").withStyle(ChatFormatting.GRAY));
+                } else {
+                    for (String tag : wanted) lines.add(Component.literal(" #").append(Activities.tagName(tag)).withStyle(ChatFormatting.LIGHT_PURPLE));
+                }
+                lines.add(Component.empty());
+                lines.add(Component.translatable("partyfinder.chest.tags.click").withStyle(ChatFormatting.YELLOW));
+            }
         }
         return lines;
     }
@@ -206,6 +218,9 @@ public class ChestListingScreen extends Screen {
             case LEAVE -> {
                 if (!PartySync.leave()) BackendConnection.delist();
             }
+            case TAGS -> minecraft.gui.setScreen(new TagsScreen(this, Component.translatable("partyfinder.tags.filter.title"),
+                    PartyFinderScreen.availableTags(category, activities), PartyFinderScreen.tagFilter(category, activities), 0,
+                    "partyfinder.tags.filter.hint", this::refresh));
         }
         return true;
     }

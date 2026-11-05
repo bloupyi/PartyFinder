@@ -108,6 +108,7 @@ Two optional top-level keys sit next to `activities`:
 | `categories` | Category order in the activity picker; categories it leaves out follow in activity order. |
 | `unknown` | Style of activities your mod does not know (newer version): `icon`, `sprite`, `color`, `max_size`, `stats`, `category`. |
 | `category_items` | Per category, the SkyBlock item ids (`HYPERION`, `TERMINATOR`...) listed under "Items" in a player's stats card, in this order. The server only looks for the mod's own list, so a pack can reorder or drop items, not add new ones. Names come from `partyfinder.item.<id in lowercase>` or the id made readable. |
+| `category_tags` | Per category, the tags a listing can carry (at most 20 per category, 5 per listing), in picker order. The server only accepts the mod's own tags, so a pack can reorder or drop tags, not add new ones. Names come from `partyfinder.tag.<id>`. |
 
 Names come from the lang files: `partyfinder.activity.<id>`, `partyfinder.category.<category>`,
 `partyfinder.option.<option>` and `partyfinder.option.<option>.<value>`.
@@ -115,7 +116,7 @@ Names come from the lang files: `partyfinder.activity.<id>`, `partyfinder.catego
 ## `partyfinder/theme.json`
 
 `colors` maps each key to a `#RRGGBB` color. Listing: `title`, `label`, `empty`, `owner`, `note`,
-`requirements`, `age`, `slots_open`, `slots_full`, `stat`, `leader`. Connection status: `status_online`,
+`requirements`, `tags`, `tag_selected` (picked tags in the tag picker), `age`, `slots_open`, `slots_full`, `stat`, `leader`. Connection status: `status_online`,
 `status_connecting`, `status_offline`. Chest menu: `menu_title`, `menu_status_online`, `menu_status_connecting`,
 `menu_status_offline`. Moderation: `reports_some`, `reports_none`, `report_limit`, `banned`. Party HUD:
 `hud_name`, `hud_self`, `hud_leader`, `hud_info`, `hud_unknown`, `hud_health_high`, `hud_health_mid`,
@@ -156,7 +157,7 @@ ones of `menu.json`.
 | `own_glint` | `true` makes your own listing glint. |
 | `full_marker` | `true` draws `partyfinder.symbol.full` (lang) on full parties, color `full_marker`. |
 | `empty_slot`, `empty_icon` | Slot and icon shown when there are no listings. |
-| `buttons` | `previous`, `next`, `back`, `close`, `create`, `requests`, `leave`: each `{ "slot", "icon" }`, or `null` to remove it. |
+| `buttons` | `previous`, `next`, `back`, `close`, `create`, `requests`, `leave`, `tags` (filter by tags): each `{ "slot", "icon" }`, or `null` to remove it. |
 
 Buttons only show when they do something (no `previous` on the first page, no `requests` without requests...).
 

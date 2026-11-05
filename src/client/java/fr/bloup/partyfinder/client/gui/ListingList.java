@@ -124,7 +124,15 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
             }
 
             String note = listing.note().isEmpty() ? Component.translatable("partyfinder.listing.no_note").getString() : listing.note();
-            g.text(font, clip(font, note, right - textX), textX, line2, Activities.color("note", 0xE0E0E0));
+            // Tags on the right of the note line, taking at most half of it.
+            int noteRight = right;
+            if (!listing.tags().isEmpty()) {
+                String tags = clip(font, tagLine(listing), (right - textX) / 2);
+                int tagsWidth = font.width(tags);
+                g.text(font, tags, right - tagsWidth, line2, Activities.color("tags", 0xFF55FF));
+                noteRight = right - tagsWidth - 6;
+            }
+            g.text(font, clip(font, note, noteRight - textX), textX, line2, Activities.color("note", 0xE0E0E0));
 
             String age = age(listing.createdAt()).getString();
             int ageWidth = font.width(age);
@@ -158,6 +166,10 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
         tooltip.add(Component.literal(listing.owner().name()).withColor(0xAAAAAA));
         tooltip.add(Component.literal(note));
         if (!listing.requirements().isEmpty()) tooltip.add(Component.literal(listing.requirements()).withColor(0xFFAA00));
+        if (!listing.tags().isEmpty()) {
+            tooltip.add(Component.translatable("partyfinder.listing.tags", String.join(", ", listing.tags().stream()
+                    .map(t -> Activities.tagName(t).getString()).toList())).withColor(Activities.color("tags", 0xFF55FF)));
+        }
         if (listing.hasReportLimit()) {
             tooltip.add(Component.translatable("partyfinder.listing.max_reports.tooltip", listing.maxReports()).withColor(0xAAAAAA));
         }
@@ -177,6 +189,11 @@ public class ListingList extends ObjectSelectionList<ListingList.Entry> {
         tooltip.add(Component.translatable("partyfinder.listing.members", listing.size(), listing.maxSize()).withColor(0xFFFFFF));
         for (Listing.Member member : listing.members()) tooltip.add(memberLine(listing, activity, member));
         return tooltip;
+    }
+
+    /** "#Thunder #Lord Jawbus" */
+    private static String tagLine(Listing listing) {
+        return String.join(" ", listing.tags().stream().map(t -> "#" + Activities.tagName(t).getString()).toList());
     }
 
     /** Wanted roles not yet covered: by a member's selected class (dungeons) or chosen role (Kuudra). */

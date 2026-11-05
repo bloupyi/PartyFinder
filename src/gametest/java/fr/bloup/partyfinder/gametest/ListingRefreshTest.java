@@ -61,6 +61,6 @@ public class ListingRefreshTest implements FabricClientGameTest {
         long now = System.currentTimeMillis();
         List<Listing.Member> members = List.of(new Listing.Member(owner.uuid(), owner.name(), null, false, null, null));
         return new Listing(id, owner, "other", Map.of(), note, "", size, 5, Listing.NO_REPORT_LIMIT, Map.of(), List.of(),
-                ReportSummary.NONE, members, null, now, now, "misc");
+                ReportSummary.NONE, members, null, now, now, "misc", List.of());
     }
 }
