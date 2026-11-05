@@ -9,6 +9,7 @@ import fr.bloup.partyfinder.client.party.PartyFinderState;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 
@@ -17,6 +18,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
+/**
+ * The only place the mod sends anything to the Minecraft server besides the official Hypixel Mod API packets
+ * (HypixelProtocol): chat commands from fixed allowlists. No container clicks, no GUI packets, no chat messages;
+ * the build's checkOutboundPackets task fails if other code starts sending packets.
+ */
 public final class PartyActions {
     private static final Component PREFIX = Component.literal("[PF] ").withStyle(ChatFormatting.DARK_AQUA);
     private static final int INVITE_ACCEPT_DELAY_TICKS = 20;
@@ -43,7 +49,8 @@ public final class PartyActions {
 
     public static void tick(Minecraft mc) {
         if (pendingScreen != null) {
-            mc.gui.setScreen(pendingScreen);
+            // Replacing a server menu (Hypixel chest GUI) would send a container close packet: never do it.
+            if (!(mc.gui.screen() instanceof AbstractContainerScreen<?>)) mc.gui.setScreen(pendingScreen);
             pendingScreen = null;
         }
         Iterator<Delayed> it = DELAYED.iterator();
@@ -75,7 +82,12 @@ public final class PartyActions {
         send(command);
     }
 
+    /** Every command goes through here and must match one of the allowlists, whoever the caller is. */
     private static void send(String command) {
+        if (!PARTY_COMMAND.matcher(command).matches() && !Activities.isSafeCommand(command)) {
+            Partyfinder.LOGGER.warn("Blocked command \"{}\"", command);
+            return;
+        }
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
         sendingOwn = true;

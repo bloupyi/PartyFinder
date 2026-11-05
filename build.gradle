@@ -125,8 +125,43 @@ tasks.register("checkResourcePackTemplate") {
 	}
 }
 
+// Packets that are not chat commands (container clicks, item use, GUI actions...) can get players banned on Hypixel.
+// The mod only sends allowlisted commands (PartyActions) and the official Hypixel Mod API packets (hypixel/): any
+// other way of sending something to the server fails the build.
+tasks.register("checkOutboundPackets") {
+	group = "verification"
+	description = "Fails when code outside the allowed files sends packets to the Minecraft server."
+	def roots = ["src/client/java", "src/main/java"].collect { layout.projectDirectory.dir(it) }
+	roots.each { inputs.dir(it) }
+	doLast {
+		// pattern -> files (relative to the source root) allowed to contain it
+		def rules = [
+			(~/\bsendCommand\b/)                                                       : ["fr/bloup/partyfinder/client/PartyActions.java"],
+			(~/ClientPlayNetworking\.send|ClientConfigurationNetworking\.send/)        : ["fr/bloup/partyfinder/client/hypixel/HypixelProtocol.java"],
+			(~/HypixelModAPI\.getInstance\(\)\.sendPacket|\bServerbound[A-Z]\w*Packet\b/): ["fr/bloup/partyfinder/client/hypixel/ModApiTransport.java"],
+			(~/sendUnsignedCommand|sendChat|\bconnection\.send\(|getConnection\(\)\.send\(|\.send\(new /): [],
+			(~/\bgameMode\b|MultiPlayerGameMode|handleInventoryMouseClick|handleContainerInput|clickContainer|closeContainer|ServerboundContainer/): [],
+		]
+		def violations = []
+		roots.each { root ->
+			root.asFile.eachFileRecurse(groovy.io.FileType.FILES) { file ->
+				if (!file.name.endsWith(".java")) return
+				def rel = root.asFile.toPath().relativize(file.toPath()).toString().replace('\\', '/')
+				file.readLines().eachWithIndex { line, i ->
+					rules.each { pattern, allowed ->
+						if (line =~ pattern && !allowed.contains(rel)) violations << "${rel}:${i + 1}: ${line.trim()}"
+					}
+				}
+			}
+		}
+		if (!violations.isEmpty()) {
+			throw new GradleException("Packets sent outside PartyActions / the Hypixel Mod API:\n" + violations.join("\n"))
+		}
+	}
+}
+
 tasks.named("check") {
-	dependsOn "checkResourcePackTemplate"
+	dependsOn "checkResourcePackTemplate", "checkOutboundPackets"
 }
 
 tasks.register("resourcePackTemplate", Zip) {
