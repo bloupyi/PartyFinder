@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -42,7 +43,8 @@ public final class InviteAccept {
 
     /** Our join request was accepted: accept the invite from whoever sends it for that party (inviter or owner). */
     public static void expect(String inviter, String owner) {
-        Set<String> names = Set.of(inviter.toLowerCase(Locale.ROOT), owner.toLowerCase(Locale.ROOT));
+        // Usually the same player (the owner holds the Hypixel lead): Set.of would throw on the duplicate.
+        Set<String> names = Set.copyOf(List.of(inviter.toLowerCase(Locale.ROOT), owner.toLowerCase(Locale.ROOT)));
         long now = System.currentTimeMillis();
         for (Invite invite : SEEN) {
             if (now - invite.at() <= SEEN_MS && invite.from(names)) {
