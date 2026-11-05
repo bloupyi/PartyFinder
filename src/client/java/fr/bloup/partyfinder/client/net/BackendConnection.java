@@ -265,9 +265,16 @@ public final class BackendConnection {
         send(msg);
     }
 
-    /** Asks the current Hypixel leader of the finder party to transfer the lead to us so we can /p warp. */
-    public static void warp() {
-        send(message("warp"));
+    /** /pf ptme: asks the Party Leader (Hypixel lead) to transfer the lead to us. */
+    public static void ptme() {
+        send(message("ptme"));
+    }
+
+    /** /pf warp: asks the Party Leader to /p warp the party into their lobby. */
+    public static void summon(UUID leader) {
+        JsonObject msg = message("summon");
+        if (leader != null) msg.addProperty("leader", leader.toString());
+        send(msg);
     }
 
     /** PF leader who lost the Hypixel lead: the current Hypixel leader sends the invite. */
@@ -466,6 +473,18 @@ public final class BackendConnection {
                 Listing.Player to = player(msg.get("to"));
                 String listingId = msg.get("listing").getAsString();
                 if (to != null) onClient(() -> PartyTransfer.onTransferRequest(listingId, to));
+            }
+            case "join_cancelled" -> {
+                try {
+                    UUID player = UUID.fromString(msg.get("player").getAsString());
+                    onClient(() -> PartyFinderState.removeJoinRequest(player));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            case "summon_request" -> {
+                Listing.Player from = player(msg.get("from"));
+                String listingId = msg.get("listing").getAsString();
+                if (from != null) onClient(() -> PartyTransfer.onSummonRequest(listingId, from));
             }
             case "invite_member" -> {
                 String name = msg.get("name").getAsString();

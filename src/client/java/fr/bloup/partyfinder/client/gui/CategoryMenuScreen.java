@@ -291,8 +291,7 @@ public class CategoryMenuScreen extends Screen {
     private int count(MenuLayout.Slot slot) {
         return switch (slot.action()) {
             case CATEGORY -> (int) PartyFinderState.listings().stream()
-                    .map(Listing::activity)
-                    .filter(id -> Activities.get(id).category().equals(slot.category()))
+                    .filter(l -> l.effectiveCategory().equals(slot.category()))
                     .count();
             case ALL -> PartyFinderState.listings().size();
             case REQUESTS -> PartyFinderState.joinRequests().size();

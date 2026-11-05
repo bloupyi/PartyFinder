@@ -61,13 +61,13 @@ Slot actions: `category` (opens one category, needs `category`), `all` (every li
 | `max_size` | Party size (at least 2). |
 | `options[]` | `id` + `values[]` (`id`, optional `commands`). The first option is appended to the listing title. Only travel commands are run: `warp <place>` and `joininstance <INSTANCE>` (leading `/` optional); anything else is ignored. |
 | `launch` | Who runs the selected values' commands once the party is full: `host`, `all` or `none`. |
-| `transfer` | `true` lets any member take the Hypixel lead to `/pf warp` (mineshafts). |
 | `stats[]` | Member stats shown and usable as verified requirements: `sb`, `cata`, `class`, `hotm`, `kuudra`, `skill_<mining\|fishing\|combat\|farming\|foraging\|enchanting\|alchemy\|taming\|hunting>`, `slayer_<zombie\|spider\|wolf\|enderman\|blaze\|vampire>`. |
 | `events[]` | Event alerts suggesting this activity: `fishing_festival`, `spooky_festival`, `mining_fiesta`, `diana`. |
 
-Activities are matched by `id` between players: an id that only exists in your pack shows up for everyone else
-as an unknown activity (paper icon, "Other" category). Restyle existing activities freely, but add new ones to
-the mod itself.
+The server only accepts the mod's own activities: their `id`, `category` and option values are checked against
+its list, so a pack cannot publish new activities, move one to another category or add option values. Restyle
+existing activities freely (icon, sprite, color, names) and change your own launch `commands`, which only ever run
+on your side; new activities have to be added to the mod and the server.
 
 Names come from the lang files: `partyfinder.activity.<id>`, `partyfinder.category.<category>`,
 `partyfinder.option.<option>` and `partyfinder.option.<option>.<value>`.

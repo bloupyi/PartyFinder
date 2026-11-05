@@ -26,6 +26,9 @@ public final class PartyFinderState {
 
     private static final Map<String, Listing> LISTINGS = new LinkedHashMap<>();
     private static final Map<UUID, JoinRequest> JOIN_REQUESTS = new LinkedHashMap<>();
+    private static final Map<UUID, Long> JOIN_REQUEST_AT = new LinkedHashMap<>();
+    // Same lifetime as on the server: an older request can no longer be accepted.
+    private static final long JOIN_REQUEST_TTL_MS = 2 * 60 * 1000;
     private static final Map<UUID, Long> OUTGOING_REQUESTS = new LinkedHashMap<>();
     private static final long OUTGOING_REQUEST_TTL_MS = 2 * 60 * 1000;
     private static final List<Runnable> LISTENERS = new CopyOnWriteArrayList<>();
@@ -64,6 +67,7 @@ public final class PartyFinderState {
         if (newStatus != Status.ONLINE) {
             LISTINGS.clear();
             JOIN_REQUESTS.clear();
+            JOIN_REQUEST_AT.clear();
             OUTGOING_REQUESTS.clear();
             Moderation.clear();
         }
@@ -136,7 +140,9 @@ public final class PartyFinderState {
     }
 
     public static void addJoinRequest(JoinRequest request) {
+        JOIN_REQUESTS.remove(request.player().uuid());
         JOIN_REQUESTS.put(request.player().uuid(), request);
+        JOIN_REQUEST_AT.put(request.player().uuid(), System.currentTimeMillis());
         changed();
     }
 
@@ -144,6 +150,7 @@ public final class PartyFinderState {
         for (JoinRequest request : JOIN_REQUESTS.values()) {
             if (request.player().name().equalsIgnoreCase(name)) {
                 JOIN_REQUESTS.remove(request.player().uuid());
+                JOIN_REQUEST_AT.remove(request.player().uuid());
                 changed();
                 return Optional.of(request.player());
             }
@@ -158,6 +165,28 @@ public final class PartyFinderState {
     public static boolean consumeRequested(UUID owner) {
         Long expiry = OUTGOING_REQUESTS.remove(owner);
         return expiry != null && expiry >= System.currentTimeMillis();
+    }
+
+    /** When the newest pending join request arrived; 0 when there is none. */
+    public static long latestJoinRequestAt() {
+        return JOIN_REQUEST_AT.values().stream().mapToLong(Long::longValue).max().orElse(0);
+    }
+
+    /** The player was accepted into another party: their request here is void. */
+    public static void removeJoinRequest(UUID player) {
+        JOIN_REQUEST_AT.remove(player);
+        if (JOIN_REQUESTS.remove(player) != null) changed();
+    }
+
+    /** Drops requests the server has expired, so they cannot be accepted by mistake. */
+    public static void tick() {
+        long now = System.currentTimeMillis();
+        boolean removed = JOIN_REQUEST_AT.entrySet().removeIf(e -> {
+            if (now - e.getValue() <= JOIN_REQUEST_TTL_MS) return false;
+            JOIN_REQUESTS.remove(e.getKey());
+            return true;
+        });
+        if (removed) changed();
     }
 
     public static List<JoinRequest> joinRequests() {

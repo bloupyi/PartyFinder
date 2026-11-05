@@ -16,14 +16,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Automatic party transfers (/pf warp) for activities where whoever found the spot must warp the party (mineshafts),
- * and the guard that keeps Hypixel party leader powers with the finder leader.
+ * Party commands between Party Owner (who listed the party in the finder) and Party Leader (who holds the Hypixel
+ * lead): /pf warp asks the Party Leader to /p warp you, /pf pt or /pf ptme gets you the lead (any activity), and
+ * the guard that keeps leader powers with the Party Owner.
  */
 public final class PartyTransfer {
-    private static final long WARP_TIMEOUT_MS = 15_000;
-    private static final int WARP_DELAY_TICKS = 10;
-    // Right after Hypixel's transfer message: just enough spacing for Hypixel to take the next command.
-    private static final int CHAT_WARP_DELAY_TICKS = 4;
+    private static final long PTME_TIMEOUT_MS = 15_000;
+    // A Party Leader warps for each request, but not more often than this.
+    private static final long SUMMON_COOLDOWN_MS = 5_000;
     // "The party was transferred to [MVP+] Name by [VIP] Leader" (or "... because Leader left"). Anchored per line: a
     // player typing this shows as "Name: ...", which does not match.
     private static final Pattern TRANSFERRED = Pattern.compile(
@@ -37,41 +37,56 @@ public final class PartyTransfer {
 
     private static final long REJOIN_CHECK_MS = 30_000;
 
-    private static long warpUntil;
+    private static long ptmeUntil;
     private static long rejoinCheckUntil;
+    private static long lastSummonAt;
 
     private PartyTransfer() {
     }
 
-    /** /pf warp: warps right away when leader, otherwise gets the lead transferred first. */
+    /** Finder party we are in: as owner, through the finder, or listed by the owner as a member of their party. */
+    private static Optional<Listing> partyListing() {
+        return PartySync.currentListing().or(() -> PartyFinderState.self().flatMap(self -> PartyFinderState.listings().stream()
+                .filter(l -> l.hasMember(self.uuid())).findFirst()));
+    }
+
+    /**
+     * /pf warp: /p warp when we are the Party Leader, otherwise asks the Party Leader's mod to run it (only the
+     * Hypixel leader can warp). Anyone in the party can ask, not only the owner.
+     */
     public static Optional<String> warp() {
-        Optional<Listing> listing = PartySync.currentListing();
-        if (listing.isEmpty()) return Optional.of("partyfinder.error.not_in_finder_party");
         if (!HypixelBridge.inParty()) return Optional.of("partyfinder.error.not_in_hypixel_party");
         if (HypixelBridge.isLeaderOrSolo()) {
             PartyActions.command("party warp");
             return Optional.empty();
         }
-        if (!PartySync.allowsTransfer(listing.get())) return Optional.of("partyfinder.error.transfer_not_allowed");
-        warpUntil = System.currentTimeMillis() + WARP_TIMEOUT_MS;
-        BackendConnection.warp();
-        HypixelBridge.requestRefresh(2_000);
-        PartyActions.chat(Component.translatable("partyfinder.chat.warp_requested").withStyle(ChatFormatting.YELLOW));
+        if (partyListing().isEmpty()) return Optional.of("partyfinder.error.not_in_finder_party");
+        // Whoever holds the Hypixel lead right now, as the Mod API tells us: that is whose lobby we get warped into.
+        BackendConnection.summon(HypixelBridge.leader().orElse(null));
+        PartyActions.chat(Component.translatable("partyfinder.chat.warp_asked").withStyle(ChatFormatting.YELLOW));
         return Optional.empty();
     }
 
-    /**
-     * Waiting for the lead to warp: Hypixel's transfer message naming us is the fastest signal, well before the Mod API
-     * party info confirms it (tick() keeps that as the fallback).
-     */
+    /** /pf pt, /pf ptme: asks the Party Leader for the Hypixel lead (finder members and the Party Owner). */
+    public static Optional<String> ptme() {
+        if (PartySync.currentListing().isEmpty()) return Optional.of("partyfinder.error.not_in_finder_party");
+        if (!HypixelBridge.inParty()) return Optional.of("partyfinder.error.not_in_hypixel_party");
+        if (HypixelBridge.isLeaderOrSolo()) return Optional.of("partyfinder.error.already_leader");
+        ptmeUntil = System.currentTimeMillis() + PTME_TIMEOUT_MS;
+        BackendConnection.ptme();
+        HypixelBridge.requestRefresh(2_000);
+        PartyActions.chat(Component.translatable("partyfinder.chat.ptme_requested").withStyle(ChatFormatting.YELLOW));
+        return Optional.empty();
+    }
+
+    /** Waiting for the lead: Hypixel's transfer message naming us confirms it before the Mod API party info does. */
     public static void onChat(Component message) {
-        if (warpUntil == 0 || System.currentTimeMillis() > warpUntil) return;
+        if (ptmeUntil == 0) return;
         Matcher m = TRANSFERRED.matcher(FORMATTING.matcher(message.getString()).replaceAll(""));
         String self = Minecraft.getInstance().getUser().getName();
         while (m.find()) {
             if (!m.group(1).equalsIgnoreCase(self)) continue;
-            warpUntil = 0;
-            PartyActions.later(CHAT_WARP_DELAY_TICKS, () -> PartyActions.command("party warp"));
+            ptmeUntil = 0;
             HypixelBridge.requestRefresh(0);
             return;
         }
@@ -82,32 +97,61 @@ public final class PartyTransfer {
             if (System.currentTimeMillis() > rejoinCheckUntil) rejoinCheckUntil = 0;
             else if (HypixelBridge.isKnown() && returnLead()) rejoinCheckUntil = 0;
         }
-        if (warpUntil == 0) return;
+        if (ptmeUntil == 0) return;
         if (HypixelBridge.inParty() && HypixelBridge.isLeaderOrSolo()) {
-            warpUntil = 0;
-            PartyActions.later(WARP_DELAY_TICKS, () -> PartyActions.command("party warp"));
-        } else if (System.currentTimeMillis() > warpUntil) {
-            warpUntil = 0;
-            PartyActions.chat(Component.translatable("partyfinder.chat.warp_timeout").withStyle(ChatFormatting.RED));
+            ptmeUntil = 0;
+        } else if (System.currentTimeMillis() > ptmeUntil) {
+            ptmeUntil = 0;
+            PartyActions.chat(Component.translatable("partyfinder.chat.ptme_timeout").withStyle(ChatFormatting.RED));
         }
     }
 
-    /** Backend relays a member's /pf warp to us, the current Hypixel leader. */
+    /** Backend relays a member's /pf ptme to us, the Party Leader. */
     public static void onTransferRequest(String listingId, Listing.Player to) {
-        Optional<Listing> listing = PartySync.currentListing().filter(l -> l.id().equals(listingId));
-        if (listing.isEmpty() || !PartySync.allowsTransfer(listing.get())) return;
-        if (!HypixelBridge.inParty() || !HypixelBridge.isLeaderOrSolo() || !HypixelBridge.members().contains(to.uuid())) return;
+        if (canTransfer(listingId, to)) LeaderPrompts.offer(LeaderPrompts.Type.TRANSFER, listingId, to);
+    }
+
+    private static boolean canTransfer(String listingId, Listing.Player to) {
+        return PartySync.currentListing().filter(l -> l.id().equals(listingId)).isPresent()
+                && HypixelBridge.inParty() && HypixelBridge.isLeaderOrSolo() && HypixelBridge.members().contains(to.uuid());
+    }
+
+    /** Accepted transfer request (prompt or auto-accept). */
+    static void transferTo(String listingId, Listing.Player to) {
+        if (!canTransfer(listingId, to)) return;
         if (PartyActions.partyCommand("transfer", to.name())) {
             PartyActions.chat(Component.translatable("partyfinder.chat.transferring", to.name()).withStyle(ChatFormatting.YELLOW));
             HypixelBridge.requestRefresh(1_500);
         }
     }
 
+    /** Backend relays a party member's /pf warp to us, the Party Leader: warp them into our lobby. */
+    public static void onSummonRequest(String listingId, Listing.Player from) {
+        if (canWarp(listingId, from)) LeaderPrompts.offer(LeaderPrompts.Type.WARP, listingId, from);
+    }
+
+    private static boolean canWarp(String listingId, Listing.Player from) {
+        return partyListing().filter(l -> l.id().equals(listingId)).isPresent()
+                && HypixelBridge.inParty() && HypixelBridge.isLeaderOrSolo() && HypixelBridge.members().contains(from.uuid());
+    }
+
+    /** Accepted warp request (prompt or auto-accept). */
+    static void warpFor(String listingId, Listing.Player from) {
+        if (!canWarp(listingId, from)) return;
+        long now = System.currentTimeMillis();
+        if (now - lastSummonAt < SUMMON_COOLDOWN_MS) return;
+        lastSummonAt = now;
+        PartyActions.command("party warp");
+        PartyActions.chat(Component.translatable("partyfinder.chat.warping_for", from.name()).withStyle(ChatFormatting.YELLOW));
+    }
+
     /** Backend relays an invite (request accepted or /p invite by the PF leader) to us, the current Hypixel leader. */
     public static void onInviteMember(String listingId, String name) {
         if (PartySync.currentListing().filter(l -> l.id().equals(listingId)).isEmpty() || !HypixelBridge.isLeaderOrSolo()) return;
         if (PartyActions.partyCommand("invite", name)) {
-            PartyActions.chat(Component.translatable("partyfinder.chat.inviting_for", name).withStyle(ChatFormatting.YELLOW));
+            boolean owner = PartySync.currentListing().map(l -> PartyFinderState.isSelf(l.owner())).orElse(false);
+            PartyActions.chat(Component.translatable(owner ? "partyfinder.chat.inviting" : "partyfinder.chat.inviting_for", name)
+                    .withStyle(ChatFormatting.YELLOW));
         }
     }
 
@@ -126,7 +170,7 @@ public final class PartyTransfer {
         List<String> invited = Arrays.asList(args).subList(sub.equals("invite") ? 2 : 1, args.length);
         boolean owner = PartyFinderState.isSelf(listing.get().owner());
 
-        if (sub.equals("warp") && !HypixelBridge.isLeaderOrSolo() && PartySync.allowsTransfer(listing.get())) {
+        if (sub.equals("warp") && !HypixelBridge.isLeaderOrSolo()) {
             warp().ifPresent(key -> PartyActions.chat(Component.translatable(key).withStyle(ChatFormatting.RED)));
             return false;
         }
@@ -168,7 +212,7 @@ public final class PartyTransfer {
 
     /** Leaving the server while holding the lead of someone else's finder party gives it back first. */
     public static void onDisconnecting() {
-        warpUntil = 0;
+        ptmeUntil = 0;
         returnLead();
     }
 
@@ -178,7 +222,8 @@ public final class PartyTransfer {
     }
 
     public static void reset() {
-        warpUntil = 0;
+        ptmeUntil = 0;
+        lastSummonAt = 0;
         rejoinCheckUntil = 0;
     }
 }

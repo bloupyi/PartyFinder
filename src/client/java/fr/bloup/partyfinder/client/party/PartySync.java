@@ -51,8 +51,13 @@ public final class PartySync {
         return HypixelBridge.isLeaderOrSolo() && joinedListing().isEmpty();
     }
 
-    public static boolean allowsTransfer(Listing listing) {
-        return Activities.get(listing.activity()).transfer();
+    /**
+     * The Hypixel lead may sit with a member who joined through the finder (/pf warp transfers, any activity): the
+     * finder leader keeps control through the backend. Anyone else holding it means the party left the finder's hands.
+     */
+    private static boolean leadWithFinder(Listing listing) {
+        Optional<UUID> leader = HypixelBridge.leader();
+        return leader.isPresent() && listing.members().stream().anyMatch(m -> m.finder() && m.uuid().equals(leader.get()));
     }
 
     public static void tick(Minecraft mc) {
@@ -64,8 +69,8 @@ public final class PartySync {
         long now = System.currentTimeMillis();
 
         PartyFinderState.ownListing().ifPresent(listing -> {
-            if (HypixelBridge.isKnown() && !HypixelBridge.isLeaderOrSolo() && !allowsTransfer(listing)) {
-                // Only the party leader may advertise the party: leadership moved, so the listing goes away.
+            if (HypixelBridge.isKnown() && !HypixelBridge.isLeaderOrSolo() && !leadWithFinder(listing)) {
+                // The lead went to someone outside the finder: the listing can no longer be run, so it goes away.
                 if (listing.id().equals(delistedFor)) return;
                 delistedFor = listing.id();
                 BackendConnection.delist();

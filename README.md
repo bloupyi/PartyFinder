@@ -9,7 +9,8 @@ Client-side Fabric mod (Minecraft 26.2) adding a party finder for Hypixel SkyBlo
 - `/pf` or `/partyfinder` (or the `O` key) opens the category menu, then the list of parties
 - `/pf create`, `/pf delist`, `/pf accept <player>`, `/pf deny <player>`, `/pf report <player>`, `/pf reconnect`, `/pf reload`
 - `/pf go` launches the activity once the party is full (floor queue, island warp...), `/pf leave` leaves a finder party
-- `/pf warp` warps the party; in activities that allow transfers (mineshafts) any member can use it and gets the lead transferred automatically first
+- `/pf warp` gets you warped: the Party Leader (whoever holds the Hypixel lead) runs `/p warp` for you, so anyone in the party can use it; typing `/p warp` without the lead does the same
+- `/pf pt` or `/pf ptme` takes the party lead (any activity, for players who joined through the finder and the Party Owner)
 - `/pf mod` opens the moderation menu (operators only)
 - `/pf config` opens the settings, `/pf hud` configures the party HUD, `/pf hud edit` moves it
 
@@ -25,7 +26,7 @@ Settings: `/pf config` (or `config/partyfinder.json`: `autoAcceptInvites`, `noti
 - **History**: past finder parties are kept locally to invite the same players again, republish the same listing, +1 or report.
 - **Event alerts**: toast and chat when the Fishing Festival, Spooky Festival, Mining Fiesta or Diana starts (optionally a few minutes before), with the number of open parties and a View button (`/pf event <id>`).
 - **Presets**: the last listing is remembered (per activity too) and named presets can be saved; the menu offers a one-click Republish.
-- **Automatic transfers**: activities with `"transfer": true` in `activities.json` let members take the Hypixel lead to warp. The PartyFinder leader keeps control: only they accept join requests (whoever holds the Hypixel lead sends the invite), a member holding the lead hands it back when disconnecting, and in a finder party only the PartyFinder leader can `/p invite`, `/p transfer`, `/p kick`, `/p disband`, `/p promote` or `/p demote` (their invites are relayed to the current Hypixel leader).
+- **Party Leader and Party Owner**: the Party Leader holds the Hypixel lead, the Party Owner is who listed the party. Members can take the lead with `/pf ptme` (e.g. to warp the party to the mineshaft they found) and ask the Party Leader for a warp with `/pf warp`. The Party Owner keeps control: only they accept join requests (whoever holds the Hypixel lead sends the invite), a member holding the lead hands it back when disconnecting, and in a finder party only the Party Owner can `/p invite`, `/p transfer`, `/p kick`, `/p disband`, `/p promote` or `/p demote` (their invites are relayed to the Party Leader).
 
 ## Party HUD
 
@@ -42,7 +43,7 @@ Everything visual lives in `assets/partyfinder/` and can be overridden by a reso
 | File | Purpose |
 | --- | --- |
 | `partyfinder/menu.json` | Category menu (chest GUI): texture, rows, filler item, open sound, and each slot's action/category/icon |
-| `partyfinder/activities.json` | Activity list: `id`, `category`, `icon` (item id), optional `sprite`, `color`, `max_size`, `options` (floor, tier, island... each value with its launch `commands`), `launch` (`host`, `all`, `none`), `stats` shown per member (`sb`, `cata`, `class`, `hotm`, `kuudra`, `skill_<skill>`, `slayer_<boss>`), `events` it is suggested for, `transfer` |
+| `partyfinder/activities.json` | Activity list: `id`, `category`, `icon` (item id), optional `sprite`, `color`, `max_size`, `options` (floor, tier, island... each value with its launch `commands`), `launch` (`host`, `all`, `none`), `stats` shown per member (`sb`, `cata`, `class`, `hotm`, `kuudra`, `skill_<skill>`, `slayer_<boss>`), `events` it is suggested for. Packs restyle activities and their own launch commands; ids, categories and option values are checked by the server |
 | `partyfinder/theme.json` | Text colors (titles, owner, note, slots, status...) |
 | `textures/gui/sprites/listing/entry*.png` | Listing row backgrounds (nine-slice, see `.mcmeta`) |
 | `textures/gui/sprites/hud/frame*.png` | Party HUD frames (nine-slice) |

@@ -20,6 +20,9 @@ public class PartyFinderConfig {
     private static PartyFinderConfig instance = new PartyFinderConfig();
 
     public boolean autoAcceptInvites = true;
+    // Party Leader side: /pf warp and /pf ptme requests from party members are asked (toast + chat) unless these are on.
+    public boolean autoAcceptWarps = false;
+    public boolean autoAcceptTransfers = false;
     public boolean notifyJoinRequests = true;
     public boolean notifyPartyFull = true;
     public Map<String, Boolean> eventAlerts = new LinkedHashMap<>();

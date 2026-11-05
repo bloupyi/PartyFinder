@@ -16,6 +16,7 @@ import fr.bloup.partyfinder.client.gui.SettingsScreen;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.party.EventAlerts;
+import fr.bloup.partyfinder.client.party.LeaderPrompts;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.PartySync;
 import fr.bloup.partyfinder.client.party.PartyTransfer;
@@ -98,6 +99,30 @@ public final class PartyFinderCommands {
                     ctx.getSource().sendError(Component.translatable(key));
                     return 0;
                 }).orElse(1)))
+                .then(literal("answer").then(argument("type", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            for (LeaderPrompts.Type type : LeaderPrompts.Type.values()) builder.suggest(type.id());
+                            return builder.buildFuture();
+                        })
+                        .then(argument("player", StringArgumentType.word())
+                                .suggests((ctx, builder) -> {
+                                    LeaderPrompts.Type.of(StringArgumentType.getString(ctx, "type"))
+                                            .ifPresent(type -> LeaderPrompts.pendingNames(type).forEach(builder::suggest));
+                                    return builder.buildFuture();
+                                })
+                                .then(literal("yes").executes(ctx -> answer(ctx, true)))
+                                .then(literal("no").executes(ctx -> answer(ctx, false))))))
+                .then(literal("auto").then(argument("type", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            for (LeaderPrompts.Type type : LeaderPrompts.Type.values()) builder.suggest(type.id());
+                            return builder.buildFuture();
+                        })
+                        .executes(ctx -> LeaderPrompts.Type.of(StringArgumentType.getString(ctx, "type")).map(type -> {
+                            LeaderPrompts.enableAuto(type);
+                            return 1;
+                        }).orElse(0))))
+                .then(literal("pt").executes(PartyFinderCommands::ptme))
+                .then(literal("ptme").executes(PartyFinderCommands::ptme))
                 .then(literal("leave").executes(ctx -> {
                     if (!PartySync.leave()) {
                         ctx.getSource().sendError(Component.translatable("partyfinder.error.not_in_finder_party"));
@@ -164,5 +189,20 @@ public final class PartyFinderCommands {
             return 0;
         }
         return 1;
+    }
+
+    private static int ptme(com.mojang.brigadier.context.CommandContext<FabricClientCommandSource> ctx) {
+        return PartyTransfer.ptme().map(key -> {
+            ctx.getSource().sendError(Component.translatable(key));
+            return 0;
+        }).orElse(1);
+    }
+
+    private static int answer(com.mojang.brigadier.context.CommandContext<FabricClientCommandSource> ctx, boolean accept) {
+        String player = StringArgumentType.getString(ctx, "player");
+        boolean answered = LeaderPrompts.Type.of(StringArgumentType.getString(ctx, "type"))
+                .map(type -> LeaderPrompts.answer(type, player, accept)).orElse(false);
+        if (!answered) ctx.getSource().sendError(Component.translatable("partyfinder.prompt.none", player));
+        return answered ? 1 : 0;
     }
 }

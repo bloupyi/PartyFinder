@@ -174,7 +174,7 @@ public class PartyFinderScreen extends Screen {
         String query = search.toLowerCase(Locale.ROOT);
         return PartyFinderState.listings().stream().filter(l -> {
             Activity activity = Activities.get(l.activity());
-            if (!category.isEmpty() && !activity.category().equals(category)) return false;
+            if (!category.isEmpty() && !l.effectiveCategory().equals(category)) return false;
             if (!activities.isEmpty() && !activities.contains(activity.id())) return false;
             if (query.isEmpty()) return true;
             return activity.name().getString().toLowerCase(Locale.ROOT).contains(query)

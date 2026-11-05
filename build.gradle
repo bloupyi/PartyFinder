@@ -160,8 +160,46 @@ tasks.register("checkOutboundPackets") {
 	}
 }
 
+// The backend only accepts the mod's official activities, categories and option values (packs may restyle them and
+// change their own launch commands, not invent activities others see). Its copy is generated from activities.json.
+def activitiesSource = layout.projectDirectory.file("src/client/resources/assets/partyfinder/partyfinder/activities.json")
+def activitiesCatalog = layout.projectDirectory.file("backend/src/activities.json")
+def buildActivitiesCatalog = { File source ->
+	def catalog = new TreeMap<String, Object>()
+	new groovy.json.JsonSlurper().parse(source, "UTF-8").activities.each { activity ->
+		def options = new LinkedHashMap<String, Object>()
+		(activity.options ?: []).each { option -> options[option.id] = option.values.collect { it.id } }
+		catalog[activity.id] = [category: activity.category ?: "misc", options: options]
+	}
+	groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(catalog)).replace("\r\n", "\n") + "\n"
+}
+
+tasks.register("updateBackendActivities") {
+	group = "build"
+	description = "Writes the backend's activity catalog (ids, categories, option values) from activities.json."
+	inputs.file(activitiesSource)
+	outputs.file(activitiesCatalog)
+	doLast {
+		activitiesCatalog.asFile.setText(buildActivitiesCatalog(activitiesSource.asFile), "UTF-8")
+	}
+}
+
+tasks.register("checkBackendActivities") {
+	group = "verification"
+	description = "Fails when backend/src/activities.json no longer matches the mod's activities.json."
+	inputs.file(activitiesSource)
+	inputs.file(activitiesCatalog)
+	doLast {
+		def expected = buildActivitiesCatalog(activitiesSource.asFile)
+		def actual = activitiesCatalog.asFile.exists() ? activitiesCatalog.asFile.getText("UTF-8").replace("\r\n", "\n") : ""
+		if (expected != actual) {
+			throw new GradleException("backend/src/activities.json is out of date: run ./gradlew updateBackendActivities")
+		}
+	}
+}
+
 tasks.named("check") {
-	dependsOn "checkResourcePackTemplate", "checkOutboundPackets"
+	dependsOn "checkResourcePackTemplate", "checkOutboundPackets", "checkBackendActivities"
 }
 
 tasks.register("resourcePackTemplate", Zip) {

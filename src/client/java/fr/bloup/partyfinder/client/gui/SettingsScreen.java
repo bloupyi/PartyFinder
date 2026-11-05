@@ -28,6 +28,8 @@ public class SettingsScreen extends OptionsSubScreen {
         list.addHeader(Component.translatable(KEY + "section.party"));
         list.addSmall(List.of(
                 W.toggle("auto_accept_invites", c.autoAcceptInvites, v -> c.autoAcceptInvites = v),
+                W.toggle("auto_accept_warps", c.autoAcceptWarps, v -> c.autoAcceptWarps = v),
+                W.toggle("auto_accept_transfers", c.autoAcceptTransfers, v -> c.autoAcceptTransfers = v),
                 W.toggle("notify_join_requests", c.notifyJoinRequests, v -> c.notifyJoinRequests = v),
                 W.toggle("notify_party_full", c.notifyPartyFull, v -> c.notifyPartyFull = v),
                 W.toggle("share_status", c.hud.shareStatus, v -> c.hud.shareStatus = v)));

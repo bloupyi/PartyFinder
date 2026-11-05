@@ -4,6 +4,7 @@ import fr.bloup.partyfinder.Partyfinder;
 import fr.bloup.partyfinder.client.activity.Activities;
 import fr.bloup.partyfinder.client.hypixel.HypixelBridge;
 import fr.bloup.partyfinder.client.net.BackendConnection;
+import fr.bloup.partyfinder.client.party.LeaderPrompts;
 import fr.bloup.partyfinder.client.party.Listing;
 import fr.bloup.partyfinder.client.party.PartyFinderState;
 import net.minecraft.ChatFormatting;
@@ -16,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -64,6 +66,15 @@ public final class PartyActions {
 
     public static void openNextTick(Screen screen) {
         pendingScreen = screen;
+    }
+
+    /** Hypixel-style framed message: blue struck-through lines above and below, like party notifications. */
+    public static void framed(Component message) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        Component line = Component.literal("-".repeat(53)).withStyle(ChatFormatting.BLUE, ChatFormatting.STRIKETHROUGH);
+        mc.gui.chatListener().handleSystemMessage(Component.empty().append(line).append("\n").append(PREFIX.copy()).append(message)
+                .append("\n").append(line), false);
     }
 
     public static void chat(Component message) {
@@ -121,15 +132,21 @@ public final class PartyActions {
     public static boolean accept(String name) {
         return PartyFinderState.takeJoinRequest(name).map(player -> {
             if (!Listing.isValidName(player.name())) return true;
-            // After an automatic transfer only the current Hypixel leader can invite; the backend forwards it otherwise.
-            boolean invited = HypixelBridge.isLeaderOrSolo() && partyCommand("invite", player.name());
-            BackendConnection.respond(player, true, invited);
+            // No /p invite from here: the server first checks the request is still valid and a seat is free, then
+            // tells whoever holds the Hypixel lead (us or someone else) to invite (invite_member).
+            BackendConnection.respond(player, true, false);
             return true;
         }).orElse(false);
     }
 
     /** Quick answer (keybind) to the most recent join request, while it is still pending. */
     public static void respondToLatest(boolean accept) {
+        // Y/N answer whatever came last: a join request, or a warp / transfer request to us as Party Leader.
+        Optional<LeaderPrompts.Prompt> prompt = LeaderPrompts.latest();
+        if (prompt.isPresent() && prompt.get().at() >= PartyFinderState.latestJoinRequestAt()) {
+            LeaderPrompts.answer(prompt.get().type(), prompt.get().player().name(), accept);
+            return;
+        }
         List<PartyFinderState.JoinRequest> requests = PartyFinderState.joinRequests();
         if (requests.isEmpty()) return;
         String name = requests.getLast().player().name();

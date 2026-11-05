@@ -18,8 +18,7 @@ public record Activity(
         List<Option> options,
         Launch launch,
         List<String> stats,
-        List<String> events,
-        boolean transfer
+        List<String> events
 ) {
     public enum Launch { NONE, HOST, ALL }
 

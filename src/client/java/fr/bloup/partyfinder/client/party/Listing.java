@@ -1,6 +1,7 @@
 package fr.bloup.partyfinder.client.party;
 
 import com.google.gson.JsonElement;
+import fr.bloup.partyfinder.client.activity.Activities;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 
@@ -27,7 +28,8 @@ public record Listing(
         List<Member> members,
         UUID leader,
         long createdAt,
-        long updatedAt
+        long updatedAt,
+        String category
 ) {
     public static final int NO_REPORT_LIMIT = -1;
 
@@ -49,6 +51,14 @@ public record Listing(
         public JsonObject stats() {
             return rawStats != null && rawStats.isJsonObject() ? rawStats.getAsJsonObject() : null;
         }
+    }
+
+    /**
+     * Category set by the server from its official activity list (a pack cannot move a listing elsewhere); older
+     * servers do not send it, then the local activities.json decides.
+     */
+    public String effectiveCategory() {
+        return category != null ? category : Activities.get(activity).category();
     }
 
     /** Current Hypixel party leader as reported by the host; differs from the owner after an automatic transfer. */
@@ -144,6 +154,7 @@ public record Listing(
                 cleanMembers(raw.members(), raw.owner()),
                 raw.leader(),
                 raw.createdAt(),
-                raw.updatedAt());
+                raw.updatedAt(),
+                raw.category() != null && ACTIVITY.matcher(raw.category()).matches() ? raw.category() : null);
     }
 }

@@ -67,7 +67,7 @@ public final class Activities {
     public static Activity get(String id) {
         Activity activity = BY_ID.get(id);
         if (activity != null) return activity;
-        return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5, List.of(), Activity.Launch.NONE, List.of("sb"), List.of(), false);
+        return new Activity(id, "other", new ItemStack(Items.PAPER), null, 0xFFFFFF, 5, List.of(), Activity.Launch.NONE, List.of("sb"), List.of());
     }
 
     public static boolean isSafeCommand(String command) {
@@ -133,7 +133,7 @@ public final class Activities {
         List<String> events = new ArrayList<>();
         if (json.has("events")) json.getAsJsonArray("events").forEach(e -> events.add(e.getAsString()));
         return new Activity(id, category, icon, sprite, color, Math.max(2, maxSize), List.copyOf(options), launch, List.copyOf(stats),
-                List.copyOf(events), json.has("transfer") && json.get("transfer").getAsBoolean());
+                List.copyOf(events));
     }
 
     private static int parseColor(String value, int fallback) {

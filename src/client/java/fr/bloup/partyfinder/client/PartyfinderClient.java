@@ -9,6 +9,8 @@ import fr.bloup.partyfinder.client.net.BackendConnection;
 import fr.bloup.partyfinder.client.hud.PartyHud;
 import fr.bloup.partyfinder.client.party.EventAlerts;
 import fr.bloup.partyfinder.client.party.InviteAccept;
+import fr.bloup.partyfinder.client.party.LeaderPrompts;
+import fr.bloup.partyfinder.client.party.PartyFinderState;
 import fr.bloup.partyfinder.client.party.LiveStats;
 import fr.bloup.partyfinder.client.party.PartyStatus;
 import fr.bloup.partyfinder.client.party.PartySync;
@@ -53,6 +55,8 @@ public class PartyfinderClient implements ClientModInitializer {
             PartyActions.tick(mc);
             PartySync.tick(mc);
             PartyTransfer.tick();
+            PartyFinderState.tick();
+            LeaderPrompts.tick();
             PartyStatus.tick();
             LiveStats.tick();
             InviteAccept.tick();
@@ -81,6 +85,7 @@ public class PartyfinderClient implements ClientModInitializer {
             PartyStatus.reset();
             LiveStats.reset();
             InviteAccept.reset();
+            LeaderPrompts.reset();
             PartyHud.reset();
         });
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {

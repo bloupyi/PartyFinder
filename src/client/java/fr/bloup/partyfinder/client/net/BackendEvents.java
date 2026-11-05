@@ -40,7 +40,7 @@ public final class BackendEvents {
                 Component.translatable("partyfinder.toast.join_request.title"),
                 Component.translatable("partyfinder.toast.join_request.keys", from.name(),
                         PartyfinderClient.acceptKey.getTranslatedKeyMessage(), PartyfinderClient.denyKey.getTranslatedKeyMessage()));
-        PartyActions.chat(Component.translatable("partyfinder.chat.join_request", from.name())
+        PartyActions.framed(Component.translatable("partyfinder.chat.join_request", from.name())
                 .append(" ")
                 .append(reportBadge(request.reports()))
                 .append(" ")
@@ -104,7 +104,8 @@ public final class BackendEvents {
 
     public static void onError(String key, List<String> args) {
         if (!key.matches(KEY_PATTERN)) return;
-        MutableComponent message = Component.translatable("partyfinder.error." + key).withStyle(ChatFormatting.RED);
+        // Keys like accept_full name the player (%s); extra args are ignored by texts without placeholders.
+        MutableComponent message = Component.translatable("partyfinder.error." + key, args.toArray()).withStyle(ChatFormatting.RED);
         String details = switch (key) {
             case "requirements_not_met" -> args.stream().map(BackendEvents::requirementArg).filter(s -> !s.isEmpty())
                     .collect(Collectors.joining(", "));

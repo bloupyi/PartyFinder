@@ -7,7 +7,6 @@
       "color": "#55FFFF",
       "max_size": 4,
       "launch": "all",
-      "transfer": true,
       "options": [
         {
           "id": "mining_area",
@@ -924,7 +923,6 @@
       "color": "#FFAA00",
       "max_size": 4,
       "launch": "all",
-      "transfer": true,
       "options": [
         {
           "id": "mining_area",
